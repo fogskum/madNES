@@ -156,11 +156,9 @@ impl Cpu {
         self.p & flag != StatusFlag::empty()
     }
 
-    /// Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
+    // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
     pub fn load_program(&mut self, program: Vec<u8>, address: u16) {
-        for (i, byte) in program.iter().enumerate() {
-            self.memory[i] = *byte;
-        }
+        self.memory[address as usize..(address + program.len() as u16) as usize].copy_from_slice(&program);
         self.write_word(0xFFFC, address);
     }
 
@@ -307,8 +305,8 @@ mod tests {
         let mut cpu = Cpu::new();
         let program = vec![0x42, 0x42];
         cpu.load_program(program, PROGRAM_ADDRESS);
-        assert_eq!(cpu.memory[0], 0x42);
-        assert_eq!(cpu.memory[1], 0x42);
+        assert_eq!(cpu.read_byte(PROGRAM_ADDRESS+0), 0x42);
+        assert_eq!(cpu.read_byte(PROGRAM_ADDRESS+1), 0x42);
     }
 
     //#[test]
