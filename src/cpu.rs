@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Add};
 use bitflags::bitflags;
-use crate::instruction::Instruction;
+use crate::instruction::{self, Instruction};
 
 trait Memory {
     fn read_byte(&self, address: u16) -> u8;
@@ -166,40 +166,53 @@ impl Cpu {
 
     pub fn run(&mut self) {
         loop {
+            // get opcode at program counter
             let opcode = self.read_byte(self.pc);
+            self.pc += 1;
+
+            // get instruction metadata for opcode
             let instruction = INSTRUCTIONS
                 .get(&opcode)
                 .unwrap();
-
-            let mut operand_address: u16 = 0;
-            match instruction.addressing_mode {
-                AddressingMode::Immediate => {
-                    operand_address = self.pc;
-                },
-                _ => (),
-            }
-
-            self.pc += 1;
-
-            match opcode {
-                0x00 => self.brk(operand_address),
-                0xA9 => self.lda(operand_address),
-                _ => panic!("Opcode: {:#04X} not implemented!", opcode),
-            }
+            
+            // get operand address for instruction
+            let operand_address = self.get_operand_address(instruction);
+            
+            // execute instruction and return number of cycles
+            let operate_cycles = match instruction.opcode {
+                0x00 => self.brk(operand_address, &instruction.addressing_mode),
+                0xA9 => self.lda(operand_address, &instruction.addressing_mode),
+                _ => panic!("Instruction {} not implemented!", instruction.mnemonic),
+            };
         }
     }
 
-    fn lda(&mut self, address: u16) {
+    fn get_operand_address(&self, instruction: &Instruction) -> u16 {
+        match instruction.addressing_mode {
+            AddressingMode::Immediate => {
+                self.pc
+            }
+            AddressingMode::None => {
+                panic!("Addressing mode {} not supported!", instruction.addressing_mode);
+            }
+            _ => panic!("Addressing mode {} not implemented!", instruction.addressing_mode),
+        }
+    }
+
+    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) -> u8 {
         self.a = self.read_byte(address);
         self.pc += 1;
         self.set_flag(StatusFlag::Zero, self.a == 0);
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+        0
     }
 
-    fn brk(&mut self, _address: u16) {
-
+    fn brk(&mut self, address: u16, addressing_mode: &AddressingMode) -> u8 {
+        0
     }
 }
+
+use std::fmt;
 
 pub enum AddressingMode {
     None,
@@ -213,6 +226,24 @@ pub enum AddressingMode {
     Absolute,
     AbsoluteX,
     AbsoluteY,
+}
+
+impl fmt::Display for AddressingMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AddressingMode::None => write!(f, "None"),
+            AddressingMode::Immediate => write!(f, "Immediate"),
+            AddressingMode::Implied => write!(f, "Implied"),
+            AddressingMode::IndirectX => write!(f, "IndirectX"),
+            AddressingMode::IndirectY => write!(f, "IndirectY"),
+            AddressingMode::ZeroPage => write!(f, "ZeroPage"),
+            AddressingMode::ZeroPageX => write!(f, "ZeroPageX"),
+            AddressingMode::ZeroPageY => write!(f, "ZeroPageY"),
+            AddressingMode::Absolute => write!(f, "Absolute"),
+            AddressingMode::AbsoluteX => write!(f, "AbsoluteX"),
+            AddressingMode::AbsoluteY => write!(f, "AbsoluteY"),
+        }
+    }
 }
 
 bitflags! {
@@ -231,8 +262,6 @@ bitflags! {
 
 #[cfg(test)]
 mod tests {
-    //use bitflags::Flags;
-
     use super::*;
 
     #[test]
