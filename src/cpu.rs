@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
-use std::{collections::HashMap, ops::Add};
+use std::collections::HashMap;
 use bitflags::bitflags;
-use crate::instruction::{self, Instruction};
+use crate::instruction::Instruction;
 
 trait Memory {
     fn read_byte(&self, address: u16) -> u8;
