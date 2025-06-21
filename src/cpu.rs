@@ -2,25 +2,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use bitflags::bitflags;
 use crate::instruction::Instruction;
-
-trait Memory {
-    fn read_byte(&self, address: u16) -> u8;
-
-    fn write_byte(&mut self, address: u16, value: u8);
-
-    fn read_word(&self, address: u16) -> u16 {
-        let lo = self.read_byte(address) as u16;
-        let hi = self.read_byte(address + 1) as u16;
-        (hi << 8) | lo
-    }
-
-    fn write_word(&mut self, address: u16, value: u16) {
-        let lo = value as u8;
-        let hi = (value >> 8) as u8;
-        self.write_byte(address, lo);
-        self.write_byte(address + 1, hi);
-    }
-}
+use crate::memory::Memory;
 
 lazy_static! {
     static ref INSTRUCTIONS: HashMap<u8, Instruction> = {
@@ -74,6 +56,56 @@ lazy_static! {
         map.insert(0x48, Instruction::new("PHA", 0x48, AddressingMode::Implied, 1, 3));
         map.insert(0x08, Instruction::new("PHP", 0x08, AddressingMode::Implied, 1, 3));
         map.insert(0x68, Instruction::new("PLA", 0x68, AddressingMode::Implied, 1, 4));
+        // --- ADDED INSTRUCTIONS ---
+        // NOP
+        map.insert(0xEA, Instruction::new("NOP", 0xEA, AddressingMode::Implied, 2, 1));
+        // JMP
+        map.insert(0x4C, Instruction::new("JMP", 0x4C, AddressingMode::Absolute, 3, 3));
+        map.insert(0x6C, Instruction::new("JMP", 0x6C, AddressingMode::IndirectX, 5, 3));
+        // STA (Absolute, AbsoluteX, AbsoluteY, ZeroPageX, ZeroPageY, IndirectX, IndirectY)
+        map.insert(0x8D, Instruction::new("STA", 0x8D, AddressingMode::Absolute, 4, 3));
+        map.insert(0x9D, Instruction::new("STA", 0x9D, AddressingMode::AbsoluteX, 5, 3));
+        map.insert(0x99, Instruction::new("STA", 0x99, AddressingMode::AbsoluteY, 5, 3));
+        map.insert(0x81, Instruction::new("STA", 0x81, AddressingMode::IndirectX, 6, 2));
+        map.insert(0x91, Instruction::new("STA", 0x91, AddressingMode::IndirectY, 6, 2));
+        map.insert(0x95, Instruction::new("STA", 0x95, AddressingMode::ZeroPageX, 4, 2));
+        // STX, STY
+        map.insert(0x86, Instruction::new("STX", 0x86, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0x96, Instruction::new("STX", 0x96, AddressingMode::ZeroPageY, 4, 2));
+        map.insert(0x8E, Instruction::new("STX", 0x8E, AddressingMode::Absolute, 4, 3));
+        map.insert(0x84, Instruction::new("STY", 0x84, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0x94, Instruction::new("STY", 0x94, AddressingMode::ZeroPageX, 4, 2));
+        map.insert(0x8C, Instruction::new("STY", 0x8C, AddressingMode::Absolute, 4, 3));
+        // Register transfer
+        map.insert(0x8A, Instruction::new("TXA", 0x8A, AddressingMode::Implied, 2, 1));
+        map.insert(0x98, Instruction::new("TYA", 0x98, AddressingMode::Implied, 2, 1));
+        map.insert(0x9A, Instruction::new("TXS", 0x9A, AddressingMode::Implied, 2, 1));
+        map.insert(0xBA, Instruction::new("TSX", 0xBA, AddressingMode::Implied, 2, 1));
+        map.insert(0xA8, Instruction::new("TAY", 0xA8, AddressingMode::Implied, 2, 1));
+        // INC, INY, DEC, DEX, DEY
+        map.insert(0xE6, Instruction::new("INC", 0xE6, AddressingMode::ZeroPage, 5, 2));
+        map.insert(0xF6, Instruction::new("INC", 0xF6, AddressingMode::ZeroPageX, 6, 2));
+        map.insert(0xEE, Instruction::new("INC", 0xEE, AddressingMode::Absolute, 6, 3));
+        map.insert(0xFE, Instruction::new("INC", 0xFE, AddressingMode::AbsoluteX, 7, 3));
+        map.insert(0xC8, Instruction::new("INY", 0xC8, AddressingMode::Implied, 2, 1));
+        map.insert(0xCA, Instruction::new("DEX", 0xCA, AddressingMode::Implied, 2, 1));
+        map.insert(0x88, Instruction::new("DEY", 0x88, AddressingMode::Implied, 2, 1));
+        map.insert(0x29, Instruction::new("AND", 0x29, AddressingMode::Immediate, 2, 2));
+        map.insert(0x49, Instruction::new("EOR", 0x49, AddressingMode::Immediate, 2, 2));
+        map.insert(0xC9, Instruction::new("CMP", 0xC9, AddressingMode::Immediate, 2, 2));
+        map.insert(0xE0, Instruction::new("CPX", 0xE0, AddressingMode::Immediate, 2, 2));
+        map.insert(0xC0, Instruction::new("CPY", 0xC0, AddressingMode::Immediate, 2, 2));
+        map.insert(0x0A, Instruction::new("ASL", 0x0A, AddressingMode::Implied, 2, 1));
+        map.insert(0x4A, Instruction::new("LSR", 0x4A, AddressingMode::Implied, 2, 1));
+        map.insert(0x2A, Instruction::new("ROL", 0x2A, AddressingMode::Implied, 2, 1));
+        map.insert(0x6A, Instruction::new("ROR", 0x6A, AddressingMode::Implied, 2, 1));
+        map.insert(0x18, Instruction::new("CLC", 0x18, AddressingMode::Implied, 2, 1));
+        map.insert(0x38, Instruction::new("SEC", 0x38, AddressingMode::Implied, 2, 1));
+        map.insert(0x58, Instruction::new("CLI", 0x58, AddressingMode::Implied, 2, 1));
+        map.insert(0x78, Instruction::new("SEI", 0x78, AddressingMode::Implied, 2, 1));
+        map.insert(0xB8, Instruction::new("CLV", 0xB8, AddressingMode::Implied, 2, 1));
+        map.insert(0xD8, Instruction::new("CLD", 0xD8, AddressingMode::Implied, 2, 1));
+        map.insert(0xF8, Instruction::new("SED", 0xF8, AddressingMode::Implied, 2, 1));
         map
     };
 }
@@ -81,6 +113,10 @@ lazy_static! {
 #[allow(dead_code)]
 const PROGRAM_ADDRESS: u16 = 0x8000;
 
+/// Represents the 6502 CPU, including registers, program counter, 
+/// stack pointer, status flags, memory, and cycle count.
+/// Provides methods for executing instructions, managing memory, 
+/// and simulating CPU behavior.
 pub struct Cpu {
     // Accumulator
     pub a: u8,
@@ -123,7 +159,7 @@ impl Cpu {
             x: 0,
             y: 0,
             pc: 0,
-            sp: 0,
+            sp: 0xFD,
             p: StatusFlag::empty(),
             memory: [0; 0xFFFF],
             cycles: 0,
@@ -138,13 +174,11 @@ impl Cpu {
         // set PC to the address stored at 0xFFFC
         self.pc = self.read_word(0xFFFC);
         self.sp = 0xFD;
-        self.p = StatusFlag::empty();
+        self.p = StatusFlag::InterruptDisable | StatusFlag::Unused;
         self.cycles = 0;
-
-        self.set_flag(StatusFlag::InterruptDisable, true);
     }
 
-    fn set_flag(&mut self, flag: StatusFlag, value: bool) {
+    pub fn set_flag(&mut self, flag: StatusFlag, value: bool) {
         if value {
             self.p |= flag;
         } else {
@@ -152,13 +186,18 @@ impl Cpu {
         }
     }
 
-    fn get_flag(&self, flag: StatusFlag) -> bool {
+    pub fn get_flag(&self, flag: StatusFlag) -> bool {
         self.p & flag != StatusFlag::empty()
     }
 
     // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
     pub fn load_program(&mut self, program: Vec<u8>, address: u16) {
-        self.memory[address as usize..(address + program.len() as u16) as usize].copy_from_slice(&program);
+        let start = address as usize;
+        let end = start + program.len();
+        if end > self.memory.len() {
+            panic!("Program does not fit in memory: end address {:#X} exceeds memory size {:#X}", end, self.memory.len());
+        }
+        self.memory[start..end].copy_from_slice(&program);
         self.write_word(0xFFFC, address);
     }
 
@@ -176,10 +215,21 @@ impl Cpu {
             // get operand address for instruction
             let operand_address = self.get_operand_address(instruction);
             
-            // execute instruction and return number of cycles
-            let operate_cycles = match instruction.opcode {
-                0x00 => self.brk(operand_address, &instruction.addressing_mode),
-                0xA9 => self.lda(operand_address, &instruction.addressing_mode),
+            match instruction.opcode {
+                0x00 => { self.brk(operand_address, &instruction.addressing_mode); break; },
+                0xA9 => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xAA => { self.tax(); },
+                0xE8 => { self.inx(); },
+                0xEA => { self.nop(); },
+                0x4C => { self.jmp(operand_address); },
+                0x8D => { self.sta(operand_address); },
+                0x8A => { self.txa(); },
+                0x98 => { self.tya(); },
+                0xA8 => { self.tay(); },
+                0xC8 => { self.iny(); },
+                0xCA => { self.dex(); },
+                0x88 => { self.dey(); },
+                // ...add more as you implement...
                 _ => panic!("Instruction {} not implemented!", instruction.mnemonic),
             };
         }
@@ -187,26 +237,109 @@ impl Cpu {
 
     fn get_operand_address(&self, instruction: &Instruction) -> u16 {
         match instruction.addressing_mode {
-            AddressingMode::Immediate => {
-                self.pc
+            AddressingMode::Immediate => self.pc,
+            AddressingMode::ZeroPage => self.read_byte(self.pc) as u16,
+            AddressingMode::ZeroPageX => {
+                let addr = self.read_byte(self.pc);
+                addr.wrapping_add(self.x) as u16
             }
-            AddressingMode::None => {
-                panic!("Addressing mode {} not supported!", instruction.addressing_mode);
+            AddressingMode::ZeroPageY => {
+                let addr = self.read_byte(self.pc);
+                addr.wrapping_add(self.y) as u16
             }
-            _ => panic!("Addressing mode {} not implemented!", instruction.addressing_mode),
+            AddressingMode::Absolute => self.read_word(self.pc),
+            AddressingMode::AbsoluteX => self.read_word(self.pc).wrapping_add(self.x as u16),
+            AddressingMode::AbsoluteY => self.read_word(self.pc).wrapping_add(self.y as u16),
+            AddressingMode::IndirectX => {
+                let base = self.read_byte(self.pc);
+                let ptr = base.wrapping_add(self.x);
+                let lo = self.read_byte(ptr as u16) as u16;
+                let hi = self.read_byte(ptr.wrapping_add(1) as u16) as u16;
+                (hi << 8) | lo
+            }
+            AddressingMode::IndirectY => {
+                let base = self.read_byte(self.pc);
+                let lo = self.read_byte(base as u16) as u16;
+                let hi = self.read_byte(base.wrapping_add(1) as u16) as u16;
+                ((hi << 8) | lo).wrapping_add(self.y as u16)
+            }
+            AddressingMode::Implied => 0, // Implied has no operand address
+            AddressingMode::None => panic!("Addressing mode {} not supported!", instruction.addressing_mode),
         }
     }
 
-    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) -> u8 {
-        self.a = self.read_byte(address);
-        self.pc += 1;
-        self.set_flag(StatusFlag::Zero, self.a == 0);
-        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+    fn brk(&mut self, _address: u16, _addressing_mode: &AddressingMode) -> u8 {
         0
     }
 
-    fn brk(&mut self, address: u16, addressing_mode: &AddressingMode) -> u8 {
-        0
+    fn tax(&mut self) {
+        self.x = self.a;
+        self.set_flag(StatusFlag::Zero, self.x == 0);
+        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+    }
+
+    fn inx(&mut self) {
+        self.x = self.x.wrapping_add(1);
+        self.set_flag(StatusFlag::Zero, self.x == 0);
+        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+    }
+
+    fn nop(&mut self) {
+        // No operation
+    }
+
+    fn jmp(&mut self, address: u16) {
+        self.pc = address;
+    }
+
+    fn sta(&mut self, address: u16) {
+        self.write_byte(address, self.a);
+    }
+
+    fn txa(&mut self) {
+        self.a = self.x;
+        self.set_flag(StatusFlag::Zero, self.a == 0);
+        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+    }
+
+    fn tya(&mut self) {
+        self.a = self.y;
+        self.set_flag(StatusFlag::Zero, self.a == 0);
+        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+    }
+
+    fn tay(&mut self) {
+        self.y = self.a;
+        self.set_flag(StatusFlag::Zero, self.y == 0);
+        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+    }
+
+    fn iny(&mut self) {
+        self.y = self.y.wrapping_add(1);
+        self.set_flag(StatusFlag::Zero, self.y == 0);
+        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+    }
+
+    fn dex(&mut self) {
+        self.x = self.x.wrapping_sub(1);
+        self.set_flag(StatusFlag::Zero, self.x == 0);
+        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+    }
+
+    fn dey(&mut self) {
+        self.y = self.y.wrapping_sub(1);
+        self.set_flag(StatusFlag::Zero, self.y == 0);
+        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+    }
+
+    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+        self.a = value;
+        self.set_flag(StatusFlag::Zero, self.a == 0);
+        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
     }
 }
 
@@ -286,7 +419,7 @@ mod tests {
         assert_eq!(cpu.y, 0);
         assert_eq!(cpu.pc, 0x4242);
         assert_eq!(cpu.sp, 0xFD);
-        assert_eq!(cpu.p, StatusFlag::InterruptDisable);
+        assert_eq!(cpu.p, StatusFlag::InterruptDisable | StatusFlag::Unused);
         assert_eq!(cpu.cycles, 0);
     }
 
@@ -311,23 +444,16 @@ mod tests {
 
     //#[test]
     fn test_run_program_with_5_instructions() {
-
-        // assambly:
+        // assembly:
         // LDA #$C0     /* load A with 0xC0 */
         // TAX          /* copy A to X */
         // INX          /* increment X */
-        // BRK          */ break */
+        // BRK          /* break */
 
-        // arrange
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS);
-        cpu.write_byte(0xC0, 42);
         cpu.reset();
-
-        // act
         cpu.run();
-
-        // assert
         assert_eq!(cpu.x, 0xC1);
     }    
 }
