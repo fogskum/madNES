@@ -21,6 +21,24 @@ lazy_static!
         map.insert(0x19, Instruction::new("ORA", 0x19, AddressingMode::AbsoluteY, 4, 3));
         map.insert(0x01, Instruction::new("ORA", 0x01, AddressingMode::IndirectX, 6, 2));
         map.insert(0x11, Instruction::new("ORA", 0x11, AddressingMode::IndirectY, 5, 2));
+        map.insert(0x89, Instruction::new("BIT", 0x89, AddressingMode::Immediate, 2, 3));
+        map.insert(0x3C, Instruction::new("BIT", 0x3C, AddressingMode::AbsoluteX, 4, 3));
+        map.insert(0x24, Instruction::new("BIT", 0x24, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0x34, Instruction::new("BIT", 0x34, AddressingMode::ZeroPageX, 4, 2));
+        map.insert(0xC9, Instruction::new("CMP", 0xC9, AddressingMode::Immediate, 2, 2));
+        map.insert(0xC5, Instruction::new("CMP", 0xC5, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0xD5, Instruction::new("CMP", 0xD5, AddressingMode::ZeroPageX, 4, 2));
+        map.insert(0xCD, Instruction::new("CMP", 0xCD, AddressingMode::Absolute, 4, 3));
+        map.insert(0xDD, Instruction::new("CMP", 0xDD, AddressingMode::AbsoluteX, 4, 3));
+        map.insert(0xD9, Instruction::new("CMP", 0xD9, AddressingMode::AbsoluteY, 4, 3));
+        map.insert(0xC1, Instruction::new("CMP", 0xC1, AddressingMode::IndirectX, 6, 2));
+        map.insert(0xD1, Instruction::new("CMP", 0xD1, AddressingMode::IndirectY, 5, 2));
+        map.insert(0xE0, Instruction::new("CPX", 0xE0, AddressingMode::Immediate, 2, 2));
+        map.insert(0xE4, Instruction::new("CPX", 0xE4, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0xEC, Instruction::new("CPX", 0xEC, AddressingMode::Absolute, 4, 3));
+        map.insert(0xC0, Instruction::new("CPY", 0xC0, AddressingMode::Immediate, 2, 2));
+        map.insert(0xC4, Instruction::new("CPY", 0xC4, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0xCC, Instruction::new("CPY", 0xCC, AddressingMode::Absolute, 4, 3));
         // transfer
         map.insert(0xA9, Instruction::new("LDA", 0xA9, AddressingMode::Immediate, 2, 2));
         map.insert(0xA5, Instruction::new("LDA", 0xA5, AddressingMode::ZeroPage, 3, 2));
@@ -43,17 +61,37 @@ lazy_static!
         map.insert(0x85, Instruction::new("STA", 0x85, AddressingMode::ZeroPage, 3, 2));
         map.insert(0xAA, Instruction::new("TAX", 0xAA, AddressingMode::Implied, 2, 1));
         map.insert(0xE8, Instruction::new("INX", 0xE8, AddressingMode::Implied, 2, 1));
-
         // arithmetic
         map.insert(0x69, Instruction::new("ADC", 0x69, AddressingMode::Immediate, 2, 2));
+        map.insert(0x65, Instruction::new("ADC", 0x65, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0x75, Instruction::new("ADC", 0x75, AddressingMode::ZeroPageX, 4, 2));
+        map.insert(0x6D, Instruction::new("ADC", 0x6D, AddressingMode::Absolute, 4, 3));
+        map.insert(0x7D, Instruction::new("ADC", 0x7D, AddressingMode::AbsoluteX, 4, 3));
+        map.insert(0x79, Instruction::new("ADC", 0x79, AddressingMode::AbsoluteY, 4, 3));
+        map.insert(0x61, Instruction::new("ADC", 0x61, AddressingMode::IndirectX, 6, 2));
+        map.insert(0x71, Instruction::new("ADC", 0x71, AddressingMode::IndirectY, 5, 2));
+
         map.insert(0xE9, Instruction::new("SBC", 0xE9, AddressingMode::Immediate, 2, 2));
+        map.insert(0xE5, Instruction::new("SBC", 0xE5, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0xF5, Instruction::new("SBC", 0xF5, AddressingMode::ZeroPageX, 4, 2));
+        map.insert(0xED, Instruction::new("SBC", 0xED, AddressingMode::Absolute, 4, 3));
+        map.insert(0xFD, Instruction::new("SBC", 0xFD, AddressingMode::AbsoluteX, 4, 3));
+        map.insert(0xF9, Instruction::new("SBC", 0xF9, AddressingMode::AbsoluteY, 4, 3));
+        map.insert(0xE1, Instruction::new("SBC", 0xE1, AddressingMode::IndirectX, 6, 2));
+        map.insert(0xF1, Instruction::new("SBC", 0xF1, AddressingMode::IndirectY, 5, 2));
+        map.insert(0xC6, Instruction::new("DEC", 0xC6, AddressingMode::ZeroPage, 5, 2));
+        map.insert(0xD6, Instruction::new("DEC", 0xD6, AddressingMode::ZeroPageX, 6, 2));
+        map.insert(0xCE, Instruction::new("DEC", 0xCE, AddressingMode::Absolute, 6, 3));
+        map.insert(0xDE, Instruction::new("DEC", 0xDE, AddressingMode::AbsoluteX, 7, 3));
         // jump
         map.insert(0xB0, Instruction::new("BCS", 0xB0, AddressingMode::Implied, 2, 2));
         map.insert(0x90, Instruction::new("BCC", 0x90, AddressingMode::Implied, 2, 2));
         map.insert(0xF0, Instruction::new("BEQ", 0xF0, AddressingMode::Implied, 2, 2));
         map.insert(0xD0, Instruction::new("BNE", 0xD0, AddressingMode::Implied, 2, 2));
+        map.insert(0x10, Instruction::new("BPL", 0x10, AddressingMode::Implied, 2, 2));
         map.insert(0x20, Instruction::new("JSR", 0x20, AddressingMode::Absolute, 6, 3));
         map.insert(0x30, Instruction::new("BIM", 0x30, AddressingMode::Implied, 2, 2));
+        map.insert(0x60, Instruction::new("RTS", 0x60, AddressingMode::Implied, 6, 1));
         // stack
         map.insert(0x48, Instruction::new("PHA", 0x48, AddressingMode::Implied, 1, 3));
         map.insert(0x08, Instruction::new("PHP", 0x08, AddressingMode::Implied, 1, 3));
@@ -88,11 +126,14 @@ lazy_static!
         map.insert(0x88, Instruction::new("DEY", 0x88, AddressingMode::Implied, 2, 1));
         map.insert(0x29, Instruction::new("AND", 0x29, AddressingMode::Immediate, 2, 2));
         map.insert(0x49, Instruction::new("EOR", 0x49, AddressingMode::Immediate, 2, 2));
-        map.insert(0xC9, Instruction::new("CMP", 0xC9, AddressingMode::Immediate, 2, 2));
-        map.insert(0xE0, Instruction::new("CPX", 0xE0, AddressingMode::Immediate, 2, 2));
-        map.insert(0xC0, Instruction::new("CPY", 0xC0, AddressingMode::Immediate, 2, 2));
         map.insert(0x0A, Instruction::new("ASL", 0x0A, AddressingMode::Implied, 2, 1));
+        // shift
         map.insert(0x4A, Instruction::new("LSR", 0x4A, AddressingMode::Implied, 2, 1));
+        map.insert(0x46, Instruction::new("LSR", 0x46, AddressingMode::ZeroPage, 5, 2));
+        map.insert(0x56, Instruction::new("LSR", 0x56, AddressingMode::ZeroPageX, 6, 2));
+        map.insert(0x4E, Instruction::new("LSR", 0x4E, AddressingMode::Absolute, 6, 3));
+        map.insert(0x5E, Instruction::new("LSR", 0x5E, AddressingMode::AbsoluteX, 7, 3));
+
         map.insert(0x2A, Instruction::new("ROL", 0x2A, AddressingMode::Implied, 2, 1));
         map.insert(0x6A, Instruction::new("ROR", 0x6A, AddressingMode::Implied, 2, 1));
         map.insert(0x18, Instruction::new("CLC", 0x18, AddressingMode::Implied, 2, 1));
@@ -201,6 +242,8 @@ impl Cpu
         }
         self.memory[start..end].copy_from_slice(&program);
         self.write_word(0xFFFC, address);
+
+        self.disassemble(start as u16, end as u16);
     }
 
     pub fn run(&mut self, show_disassembly: bool) 
@@ -253,6 +296,22 @@ impl Cpu
                 0x01 => { self.ora( operand_address, &instruction.addressing_mode); },
                 0x11 => { self.ora( operand_address, &instruction.addressing_mode); },
                 
+                0xC9 => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xC5 => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xD5 => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xCD => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xDD => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xD9 => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xC1 => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0xD1 => { self.cmp(operand_address, &instruction.addressing_mode); },
+
+                0xE0 => { self.cpx(operand_address, &instruction.addressing_mode); },
+                0xE4 => { self.cpx(operand_address, &instruction.addressing_mode); },
+                0xEC => { self.cpx(operand_address, &instruction.addressing_mode); },
+                0xC0 => { self.cpy(operand_address, &instruction.addressing_mode); },
+                0xC4 => { self.cpy(operand_address, &instruction.addressing_mode); },
+                0xCC => { self.cpy(operand_address, &instruction.addressing_mode); },
+                
                 0xA2 => { self.ldx(operand_address, &instruction.addressing_mode); },
                 0xA6 => { self.ldx(operand_address, &instruction.addressing_mode); },
                 0xB6 => { self.ldx(operand_address, &instruction.addressing_mode); },
@@ -277,14 +336,49 @@ impl Cpu
                 0xCA => { self.dex(); },
                 0x88 => { self.dey(); },
                 0x40 => { self.rti(); },
-                0xC0 => { self.cpy(operand_address, &instruction.addressing_mode); },
-                0xE0 => { self.cpx(operand_address, &instruction.addressing_mode); },
+                0x60 => { self.rts(); },
                 // jump
                 0xB0 => { self.bcs(operand_address); },
-                
+                0x90 => { self.bcc(operand_address); },
+                0xF0 => { self.beq(operand_address); },
+                0xD0 => { self.bne(operand_address); },
+                0x10 => { self.bpl(operand_address); },
+                0x20 => { self.jsr(operand_address); },
+                0x30 => { self.bim(operand_address); },
+
                 0x69 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x65 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x75 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x6D => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x7D => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x79 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x61 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x71 => { self.adc(operand_address, &instruction.addressing_mode); },
+
                 0xE9 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                
+                0xE5 => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xF5 => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xED => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xFD => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xF9 => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xE1 => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xF1 => { self.sbc(operand_address, &instruction.addressing_mode); },
+                0xC6 => { self.dec(operand_address, &instruction.addressing_mode); },
+                0xD6 => { self.dec(operand_address, &instruction.addressing_mode); },
+                0xCE => { self.dec(operand_address, &instruction.addressing_mode); },
+                0xDE => { self.dec(operand_address, &instruction.addressing_mode); },
+
+                0x89 => { self.bit(operand_address, &instruction.addressing_mode); },
+                0x3C => { self.bit(operand_address, &instruction.addressing_mode); },
+                0x24 => { self.bit(operand_address, &instruction.addressing_mode); },
+                0x34 => { self.bit(operand_address, &instruction.addressing_mode); },
+
+                0x4A => { self.lsr(operand_address, &instruction.addressing_mode); },
+                0x46 => { self.lsr(operand_address, &instruction.addressing_mode); },
+                0x56 => { self.lsr(operand_address, &instruction.addressing_mode); },
+                0x4E => { self.lsr(operand_address, &instruction.addressing_mode); },
+                0x5E => { self.lsr(operand_address, &instruction.addressing_mode); },
+
                 _ => panic!("Instruction {} not implemented!", instruction.mnemonic),
             };
 
@@ -338,31 +432,44 @@ impl Cpu
         }
     }
 
+    // branch on carry clear
+    fn bcc(&mut self, address: u16)
+    {
+        if !self.get_flag(StatusFlag::Carry)
+        {
+            self.pc = address;
+        }
+    }
+
+    // branch on equal
     fn tax(&mut self) {
         self.x = self.a;
         self.set_flag(StatusFlag::Zero, self.x == 0);
         self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
     }
 
+    // increment X register
     fn inx(&mut self) {
         self.x = self.x.wrapping_add(1);
         self.set_flag(StatusFlag::Zero, self.x == 0);
         self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
     }
 
-    fn nop(&mut self) {
-        // No operation
-    }
+    // No operation
+    fn nop(&mut self) {}
 
+    // jump to address
     fn jmp(&mut self, address: u16) {
         self.pc = address;
     }
 
+    // store accumulator in memory
     fn sta(&mut self, address: u16) 
     {
         self.write_byte(address, self.a);
     }
 
+    // transfer accumulator to X register
     fn txa(&mut self) 
     {
         self.a = self.x;
@@ -370,36 +477,42 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
     }
 
+    // transfer accumulator to Y register
     fn tya(&mut self) {
         self.a = self.y;
         self.set_flag(StatusFlag::Zero, self.a == 0);
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
     }
 
+    // transfer Y register to accumulator
     fn tay(&mut self) {
         self.y = self.a;
         self.set_flag(StatusFlag::Zero, self.y == 0);
         self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
     }
 
+    // increment Y register
     fn iny(&mut self) {
         self.y = self.y.wrapping_add(1);
         self.set_flag(StatusFlag::Zero, self.y == 0);
         self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
     }
 
+    // decrement X register
     fn dex(&mut self) {
         self.x = self.x.wrapping_sub(1);
         self.set_flag(StatusFlag::Zero, self.x == 0);
         self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
     }
 
+    // decrement Y register
     fn dey(&mut self) {
         self.y = self.y.wrapping_sub(1);
         self.set_flag(StatusFlag::Zero, self.y == 0);
         self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
     }
 
+    // load X register with value at address
     fn ldx(&mut self, address: u16, addressing_mode: &AddressingMode) 
     {
         let value = match addressing_mode {
@@ -412,6 +525,7 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
     }
 
+    // load Y register with value at address
     fn ldy(&mut self, address: u16, addressing_mode: &AddressingMode)
     {
         let value = match addressing_mode {
@@ -424,6 +538,7 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
     }
 
+    // return from interrupt
     fn rti(&mut self) {
         // Pull status from stack (with B flag ignored)
         let status = self.pull_stack();
@@ -434,11 +549,17 @@ impl Cpu
         self.pc = (pch as u16) << 8 | (pcl as u16);
     }
 
+    fn push_stack(&mut self, value: u8) {
+        self.write_byte(0x0100 + self.sp as u16, value);
+        self.sp = self.sp.wrapping_sub(1);
+    }
+
     fn pull_stack(&mut self) -> u8 {
         self.sp = self.sp.wrapping_add(1);
         self.read_byte(0x0100 + self.sp as u16)
     }
 
+    // load accumulator with value at address
     fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) 
     {
         let value = match addressing_mode 
@@ -452,6 +573,7 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
     }
 
+    // OR memory with accumulator
     fn ora(&mut self, address: u16, addressing_mode: &AddressingMode) 
     {
         let value = match addressing_mode 
@@ -465,6 +587,7 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
     }
 
+    // add memory to accumulator with carry
     fn adc(&mut self, address: u16, addressing_mode: &AddressingMode) 
     {
         let value = match addressing_mode {
@@ -485,6 +608,10 @@ impl Cpu
         self.a = sum2;
     }
 
+    // subtract memory from accumulator with carry
+    // Note: 6502 uses two's complement for subtraction
+    // so we need to invert the bits of the value and add 1
+    // to perform the subtraction.
     fn sbc(&mut self, address: u16, addressing_mode: &AddressingMode)
     {
         let value = match addressing_mode {
@@ -506,6 +633,7 @@ impl Cpu
         self.a = sum2;
     }
 
+    // compare memory and index X
     fn cpx(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
@@ -518,6 +646,20 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, result & 0x80 != 0);
     }
 
+    // compare memory with accumulator
+    fn cmp(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        let result = self.a.wrapping_sub(value);
+        self.set_flag(StatusFlag::Carry, self.a >= value);
+        self.set_flag(StatusFlag::Zero, self.a == value);
+        self.set_flag(StatusFlag::Negative, result & 0x80 != 0);
+    }
+
+    // compare memory and index Y
     fn cpy(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
@@ -530,7 +672,21 @@ impl Cpu
         self.set_flag(StatusFlag::Negative, result & 0x80 != 0);
     }
 
-    pub fn disassemble(&self, start: u16, end: u16) 
+    // branch on equal (zero flag set)
+    fn beq(&mut self, address: u16) {
+        if self.get_flag(StatusFlag::Zero) {
+            self.pc = address;
+        }
+    }
+
+    // branch on not equal (zero flag clear)
+    fn bne(&mut self, address: u16) {
+        if !self.get_flag(StatusFlag::Zero) {
+            self.pc = address;
+        }
+    }
+
+    pub fn disassemble(&self, start: u16, end: u16)
     {
         let mut pc = start;
         while pc < end 
@@ -564,6 +720,88 @@ impl Cpu
                 pc += 1;
             }
         }
+    }
+
+    // Jump to SubRoutine
+    fn jsr(&mut self, address: u16) 
+    {
+        let return_addr = self.pc + 1;
+        self.push_stack((return_addr >> 8) as u8); // push high byte
+        self.push_stack((return_addr & 0xFF) as u8); // push low byte
+        self.pc = address;
+    }
+
+    // Return from Subroutine
+    fn rts(&mut self) 
+    {
+        let pcl = self.pull_stack();
+        let pch = self.pull_stack();
+        self.pc = ((pch as u16) << 8 | (pcl as u16)).wrapping_add(1);
+    }
+
+    // branch on minus (negative flag set)
+    fn bim(&mut self, address: u16) 
+    {
+        if self.get_flag(StatusFlag::Negative) {
+            self.pc = address;
+        }
+    }
+
+    // branch on plus (negative flag clear)
+    fn bpl(&mut self, address: u16)
+    {
+        if !self.get_flag(StatusFlag::Negative) {
+            self.pc = address;
+        }
+    }
+
+    // test bits in memory with accumulator
+    fn bit(&mut self, address: u16, addressing_mode: &AddressingMode) 
+    {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+        let result = self.a & value;
+        self.set_flag(StatusFlag::Zero, result == 0);
+        self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
+        self.set_flag(StatusFlag::Overflow, value & 0x40 != 0);
+    }
+
+    // Logical Shift Right
+    fn lsr(&mut self, address: u16, addressing_mode: &AddressingMode) 
+    {
+        match addressing_mode 
+        {
+            AddressingMode::Implied => 
+            {
+                let carry = self.a & 0x01 != 0;
+                self.a >>= 1;
+                self.set_flag(StatusFlag::Carry, carry);
+                self.set_flag(StatusFlag::Zero, self.a == 0);
+                self.set_flag(StatusFlag::Negative, false);
+            }
+            _ => 
+            {
+                let mut value = self.read_byte(address);
+                let carry = value & 0x01 != 0;
+                value >>= 1;
+                self.write_byte(address, value);
+                self.set_flag(StatusFlag::Carry, carry);
+                self.set_flag(StatusFlag::Zero, value == 0);
+                self.set_flag(StatusFlag::Negative, false);
+            }
+        }
+    }
+
+    // Decrement memory
+    fn dec(&mut self, address: u16, _addressing_mode: &AddressingMode) 
+    {
+        let mut value = self.read_byte(address);
+        value = value.wrapping_sub(1);
+        self.write_byte(address, value);
+        self.set_flag(StatusFlag::Zero, value == 0);
+        self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
     }
 }
 
@@ -623,25 +861,29 @@ bitflags!
 }
 
 #[cfg(test)]
-mod tests {
+mod tests 
+{
     use super::*;
 
     #[test]
-    fn test_read_write_byte() {
+    fn test_read_write_byte() 
+    {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x0000, 0x42);
         assert_eq!(cpu.read_byte(0x0000), 0x42);
     }
 
     #[test]
-    fn test_read_write_word() {
+    fn test_read_write_word() 
+    {
         let mut cpu = Cpu::new();
         cpu.write_word(0x0000, 0x4242);
         assert_eq!(cpu.read_word(0x0000), 0x4242);
     }
 
     #[test]
-    fn test_reset() {
+    fn test_reset() 
+    {
         let mut cpu = Cpu::new();
         cpu.write_word(0xFFFC, 0x4242);
         cpu.reset();
@@ -655,7 +897,8 @@ mod tests {
     }
 
     #[test]
-    fn test_get_set_flag() {
+    fn test_get_set_flag() 
+    {
         let mut cpu = Cpu::new();
         let flag = StatusFlag::Carry;
         cpu.set_flag(flag, true);
@@ -665,7 +908,8 @@ mod tests {
     }
 
     #[test]
-    fn test_load_program() {
+    fn test_load_program() 
+    {
         let mut cpu = Cpu::new();
         let program = vec![0x42, 0x42];
         cpu.load_program(program, PROGRAM_ADDRESS);
@@ -674,7 +918,8 @@ mod tests {
     }
 
     #[test]
-    fn test_run_program_with_4_instructions() {
+    fn test_run_program_with_4_instructions() 
+    {
         // assembly:
         // LDA #$C0     /* load A with 0xC0 */
         // TAX          /* copy A to X */
@@ -684,12 +929,13 @@ mod tests {
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS);
         cpu.pc = PROGRAM_ADDRESS;
-        cpu.run(true);
+        cpu.run(false);
         assert_eq!(cpu.x, 0xC1);
     }
 
     #[test]
-    fn test_lda_immediate() {
+    fn test_lda_immediate() 
+    {
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS);
         cpu.pc = PROGRAM_ADDRESS;
@@ -710,7 +956,8 @@ mod tests {
     }
 
     #[test]
-    fn test_lda_negative_flag() {
+    fn test_lda_negative_flag() 
+    {
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS);
         cpu.pc = 0x8000;
@@ -720,7 +967,8 @@ mod tests {
     }
 
     #[test]
-    fn test_lda_zeropage() {
+    fn test_lda_zeropage() 
+    {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x77); // value at $10
         cpu.load_program( vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS);
