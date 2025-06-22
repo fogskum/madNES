@@ -1,11 +1,13 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use bitflags::bitflags;
-use crate::instruction::Instruction;
+use crate::instruction::{Instruction};
 use crate::memory::Memory;
 
-lazy_static! {
-    static ref INSTRUCTIONS: HashMap<u8, Instruction> = {
+lazy_static!
+{
+    static ref INSTRUCTIONS: HashMap<u8, Instruction> = 
+    {
         let mut map = HashMap::new();
         // interrupts
         map.insert(0x00, Instruction::new("BRK", 0x00, AddressingMode::Implied, 7, 1));
@@ -56,20 +58,15 @@ lazy_static! {
         map.insert(0x48, Instruction::new("PHA", 0x48, AddressingMode::Implied, 1, 3));
         map.insert(0x08, Instruction::new("PHP", 0x08, AddressingMode::Implied, 1, 3));
         map.insert(0x68, Instruction::new("PLA", 0x68, AddressingMode::Implied, 1, 4));
-        // --- ADDED INSTRUCTIONS ---
-        // NOP
         map.insert(0xEA, Instruction::new("NOP", 0xEA, AddressingMode::Implied, 2, 1));
-        // JMP
         map.insert(0x4C, Instruction::new("JMP", 0x4C, AddressingMode::Absolute, 3, 3));
         map.insert(0x6C, Instruction::new("JMP", 0x6C, AddressingMode::IndirectX, 5, 3));
-        // STA (Absolute, AbsoluteX, AbsoluteY, ZeroPageX, ZeroPageY, IndirectX, IndirectY)
         map.insert(0x8D, Instruction::new("STA", 0x8D, AddressingMode::Absolute, 4, 3));
         map.insert(0x9D, Instruction::new("STA", 0x9D, AddressingMode::AbsoluteX, 5, 3));
         map.insert(0x99, Instruction::new("STA", 0x99, AddressingMode::AbsoluteY, 5, 3));
         map.insert(0x81, Instruction::new("STA", 0x81, AddressingMode::IndirectX, 6, 2));
         map.insert(0x91, Instruction::new("STA", 0x91, AddressingMode::IndirectY, 6, 2));
         map.insert(0x95, Instruction::new("STA", 0x95, AddressingMode::ZeroPageX, 4, 2));
-        // STX, STY
         map.insert(0x86, Instruction::new("STX", 0x86, AddressingMode::ZeroPage, 3, 2));
         map.insert(0x96, Instruction::new("STX", 0x96, AddressingMode::ZeroPageY, 4, 2));
         map.insert(0x8E, Instruction::new("STX", 0x8E, AddressingMode::Absolute, 4, 3));
@@ -82,7 +79,6 @@ lazy_static! {
         map.insert(0x9A, Instruction::new("TXS", 0x9A, AddressingMode::Implied, 2, 1));
         map.insert(0xBA, Instruction::new("TSX", 0xBA, AddressingMode::Implied, 2, 1));
         map.insert(0xA8, Instruction::new("TAY", 0xA8, AddressingMode::Implied, 2, 1));
-        // INC, INY, DEC, DEX, DEY
         map.insert(0xE6, Instruction::new("INC", 0xE6, AddressingMode::ZeroPage, 5, 2));
         map.insert(0xF6, Instruction::new("INC", 0xF6, AddressingMode::ZeroPageX, 6, 2));
         map.insert(0xEE, Instruction::new("INC", 0xEE, AddressingMode::Absolute, 6, 3));
@@ -117,7 +113,8 @@ const PROGRAM_ADDRESS: u16 = 0x8000;
 /// stack pointer, status flags, memory, and cycle count.
 /// Provides methods for executing instructions, managing memory, 
 /// and simulating CPU behavior.
-pub struct Cpu {
+pub struct Cpu 
+{
     // Accumulator
     pub a: u8,
 
@@ -142,7 +139,8 @@ pub struct Cpu {
     pub cycles: u8,
 }
 
-impl Memory for Cpu {
+impl Memory for Cpu 
+{
     fn read_byte(&self, address: u16) -> u8 {
         self.memory[address as usize]
     }
@@ -152,9 +150,12 @@ impl Memory for Cpu {
     }
 }
 
-impl Cpu {
-    pub fn new() -> Self {
-        Cpu {
+impl Cpu 
+{
+    pub fn new() -> Self 
+    {
+        Cpu 
+        {
             a: 0,
             x: 0,
             y: 0,
@@ -166,7 +167,8 @@ impl Cpu {
         }
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) 
+    {
         self.a = 0;
         self.x = 0;
         self.y = 0;
@@ -201,23 +203,68 @@ impl Cpu {
         self.write_word(0xFFFC, address);
     }
 
-    pub fn run(&mut self) {
-        loop {
+    pub fn run(&mut self, show_disassembly: bool) 
+    {
+        loop 
+        {
             // get opcode at program counter
             let opcode = self.read_byte(self.pc);
-            self.pc += 1;
 
+            if show_disassembly 
+            {
+                println!("PC: {:#X}", self.pc);
+                let upper_address = self.pc + 4;
+                self.disassemble(self.pc, upper_address);
+            }           
+
+            self.pc += 1;
+            
             // get instruction metadata for opcode
+            if INSTRUCTIONS.get(&opcode).is_none() 
+            {
+                continue;    
+            }
+
             let instruction = INSTRUCTIONS
                 .get(&opcode)
                 .unwrap();
-            
+        
             // get operand address for instruction
             let operand_address = self.get_operand_address(instruction);
             
-            match instruction.opcode {
+            match instruction.opcode 
+            {
                 0x00 => { self.brk(operand_address, &instruction.addressing_mode); break; },
                 0xA9 => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xA5 => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xB5 => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xAD => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xBD => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xB9 => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xA1 => { self.lda(operand_address, &instruction.addressing_mode); },
+                0xB1 => { self.lda(operand_address, &instruction.addressing_mode); },
+                
+                0x09 => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x05 => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x15 => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x0D => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x1D => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x19 => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x01 => { self.ora( operand_address, &instruction.addressing_mode); },
+                0x11 => { self.ora( operand_address, &instruction.addressing_mode); },
+                
+                0xA2 => { self.ldx(operand_address, &instruction.addressing_mode); },
+                0xA6 => { self.ldx(operand_address, &instruction.addressing_mode); },
+                0xB6 => { self.ldx(operand_address, &instruction.addressing_mode); },
+                0xAE => { self.ldx(operand_address, &instruction.addressing_mode); },
+                0xBE => { self.ldx(operand_address, &instruction.addressing_mode); },
+
+                0xA0 => { self.ldy(operand_address, &instruction.addressing_mode); },
+                0xA4 => { self.ldy(operand_address, &instruction.addressing_mode); },
+                0xB4 => { self.ldy(operand_address, &instruction.addressing_mode); },
+                0xAC => { self.ldy(operand_address, &instruction.addressing_mode); },
+                0xBC => { self.ldy(operand_address, &instruction.addressing_mode); },
+
                 0xAA => { self.tax(); },
                 0xE8 => { self.inx(); },
                 0xEA => { self.nop(); },
@@ -229,9 +276,19 @@ impl Cpu {
                 0xC8 => { self.iny(); },
                 0xCA => { self.dex(); },
                 0x88 => { self.dey(); },
-                // ...add more as you implement...
+                0x40 => { self.rti(); },
+                0xC0 => { self.cpy(operand_address, &instruction.addressing_mode); },
+                0xE0 => { self.cpx(operand_address, &instruction.addressing_mode); },
+                // jump
+                0xB0 => { self.bcs(operand_address); },
+                
+                0x69 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0xE9 => { self.sbc(operand_address, &instruction.addressing_mode); },
+                
                 _ => panic!("Instruction {} not implemented!", instruction.mnemonic),
             };
+
+            self.pc += instruction.bytes as u16 - 1; // adjust PC for instruction length
         }
     }
 
@@ -272,6 +329,15 @@ impl Cpu {
         0
     }
 
+    // branch on carry set
+    fn bcs(&mut self, address: u16) 
+    {
+        if self.get_flag(StatusFlag::Carry) 
+        {
+            self.pc = address;
+        }
+    }
+
     fn tax(&mut self) {
         self.x = self.a;
         self.set_flag(StatusFlag::Zero, self.x == 0);
@@ -292,11 +358,13 @@ impl Cpu {
         self.pc = address;
     }
 
-    fn sta(&mut self, address: u16) {
+    fn sta(&mut self, address: u16) 
+    {
         self.write_byte(address, self.a);
     }
 
-    fn txa(&mut self) {
+    fn txa(&mut self) 
+    {
         self.a = self.x;
         self.set_flag(StatusFlag::Zero, self.a == 0);
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
@@ -332,20 +400,178 @@ impl Cpu {
         self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
     }
 
-    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) {
+    fn ldx(&mut self, address: u16, addressing_mode: &AddressingMode) 
+    {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
         };
+
+        self.x = value;
+        self.set_flag(StatusFlag::Zero, self.x == 0);
+        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+    }
+
+    fn ldy(&mut self, address: u16, addressing_mode: &AddressingMode)
+    {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        self.y = value;
+        self.set_flag(StatusFlag::Zero, self.y == 0);
+        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+    }
+
+    fn rti(&mut self) {
+        // Pull status from stack (with B flag ignored)
+        let status = self.pull_stack();
+        self.p = StatusFlag::from_bits_truncate(status & 0b1110_1111 | 0b0010_0000); // Set unused flag
+        // Pull PC from stack (low then high)
+        let pcl = self.pull_stack();
+        let pch = self.pull_stack();
+        self.pc = (pch as u16) << 8 | (pcl as u16);
+    }
+
+    fn pull_stack(&mut self) -> u8 {
+        self.sp = self.sp.wrapping_add(1);
+        self.read_byte(0x0100 + self.sp as u16)
+    }
+
+    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) 
+    {
+        let value = match addressing_mode 
+        {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
         self.a = value;
         self.set_flag(StatusFlag::Zero, self.a == 0);
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+    }
+
+    fn ora(&mut self, address: u16, addressing_mode: &AddressingMode) 
+    {
+        let value = match addressing_mode 
+        {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        self.a |= value;
+        self.set_flag(StatusFlag::Zero, self.a == 0);
+        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+    }
+
+    fn adc(&mut self, address: u16, addressing_mode: &AddressingMode) 
+    {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        let carry = if self.get_flag(StatusFlag::Carry) { 1 } else { 0 };
+        let (sum1, carry1) = self.a.overflowing_add(value);
+        let (sum2, carry2) = sum1.overflowing_add(carry);
+        self.set_flag(StatusFlag::Carry, carry1 || carry2);
+        self.set_flag(StatusFlag::Zero, sum2 == 0);
+        self.set_flag(StatusFlag::Negative, sum2 & 0x80 != 0);
+        self.set_flag(
+            StatusFlag::Overflow,
+            ((self.a ^ sum2) & (value ^ sum2) & 0x80) != 0,
+        );
+        self.a = sum2;
+    }
+
+    fn sbc(&mut self, address: u16, addressing_mode: &AddressingMode)
+    {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        let carry = if self.get_flag(StatusFlag::Carry) { 1 } else { 0 };
+        let value = value ^ 0xFF; // one's complement for subtraction
+        let (sum1, carry1) = self.a.overflowing_add(value);
+        let (sum2, carry2) = sum1.overflowing_add(carry);
+        self.set_flag(StatusFlag::Carry, carry1 || carry2);
+        self.set_flag(StatusFlag::Zero, sum2 == 0);
+        self.set_flag(StatusFlag::Negative, sum2 & 0x80 != 0);
+        self.set_flag(
+            StatusFlag::Overflow,
+            ((self.a ^ sum2) & (value ^ sum2) & 0x80) != 0,
+        );
+        self.a = sum2;
+    }
+
+    fn cpx(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        let result = self.x.wrapping_sub(value);
+        self.set_flag(StatusFlag::Carry, self.x >= value);
+        self.set_flag(StatusFlag::Zero, self.x == value);
+        self.set_flag(StatusFlag::Negative, result & 0x80 != 0);
+    }
+
+    fn cpy(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        let result = self.y.wrapping_sub(value);
+        self.set_flag(StatusFlag::Carry, self.y >= value);
+        self.set_flag(StatusFlag::Zero, self.y == value);
+        self.set_flag(StatusFlag::Negative, result & 0x80 != 0);
+    }
+
+    pub fn disassemble(&self, start: u16, end: u16) 
+    {
+        let mut pc = start;
+        while pc < end 
+        {
+            let opcode = self.read_byte(pc);
+            if let Some(instr) = INSTRUCTIONS.get(&opcode) 
+            {
+                let mut bytes = vec![opcode];
+                for i in 1..instr.bytes 
+                {
+                    bytes.push(self.read_byte(pc + i as u16));
+                }
+                
+                let byte_str = bytes
+                    .iter()
+                    .map(|b| format!("{:02X}", b))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                println!("${:04X}: {:8} {} {:?}", 
+                    pc, 
+                    byte_str, 
+                    instr.mnemonic, 
+                    instr.addressing_mode);
+
+                pc += instr.bytes as u16;
+            }
+            else 
+            {
+                println!("${:04X}: {:02X}    ???", pc, opcode);
+                pc += 1;
+            }
+        }
     }
 }
 
 use std::fmt;
 
-pub enum AddressingMode {
+#[derive(Debug)]
+pub enum AddressingMode 
+{
     None,
     Immediate,
     Implied,
@@ -359,9 +585,12 @@ pub enum AddressingMode {
     AbsoluteY,
 }
 
-impl fmt::Display for AddressingMode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+impl fmt::Display for AddressingMode 
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result 
+    {
+        match self 
+        {
             AddressingMode::None => write!(f, "None"),
             AddressingMode::Immediate => write!(f, "Immediate"),
             AddressingMode::Implied => write!(f, "Implied"),
@@ -377,9 +606,11 @@ impl fmt::Display for AddressingMode {
     }
 }
 
-bitflags! {
+bitflags! 
+{
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct StatusFlag: u8 {
+    pub struct StatusFlag: u8 
+    {
         const Carry = 1 << 0;
         const Zero = 1 << 1;
         const InterruptDisable = 1 << 2;
@@ -442,8 +673,8 @@ mod tests {
         assert_eq!(cpu.read_byte(PROGRAM_ADDRESS+1), 0x42);
     }
 
-    //#[test]
-    fn test_run_program_with_5_instructions() {
+    #[test]
+    fn test_run_program_with_4_instructions() {
         // assembly:
         // LDA #$C0     /* load A with 0xC0 */
         // TAX          /* copy A to X */
@@ -452,8 +683,49 @@ mod tests {
 
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS);
-        cpu.reset();
-        cpu.run();
+        cpu.pc = PROGRAM_ADDRESS;
+        cpu.run(true);
         assert_eq!(cpu.x, 0xC1);
+    }
+
+    #[test]
+    fn test_lda_immediate() {
+        let mut cpu = Cpu::new();
+        cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS);
+        cpu.pc = PROGRAM_ADDRESS;
+        cpu.run(true);
+        assert_eq!(cpu.a, 0x42);
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_lda_zero_flag() {
+        let mut cpu = Cpu::new();
+        cpu.load_program(vec![0xA9, 0x00, 0x00], PROGRAM_ADDRESS);
+        cpu.pc = 0x8000;
+        cpu.run(false);
+        assert_eq!(cpu.a, 0x00);
+        assert!(cpu.get_flag(StatusFlag::Zero));
+    }
+
+    #[test]
+    fn test_lda_negative_flag() {
+        let mut cpu = Cpu::new();
+        cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS);
+        cpu.pc = 0x8000;
+        cpu.run(false);
+        assert_eq!(cpu.a, 0xFF);
+        assert!(cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_lda_zeropage() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x10, 0x77); // value at $10
+        cpu.load_program( vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS);
+        cpu.pc = 0x8000;
+        cpu.run(true);
+        assert_eq!(cpu.a, 0x77);
     }    
 }
