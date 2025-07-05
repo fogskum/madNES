@@ -2,8 +2,8 @@ use crate::cpu::memory::AddressingMode;
 use crate::cpu::memory::Memory;
 
 use bitflags::bitflags;
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 pub struct Instruction {
     // fixed set of strings for the instructions that are stored in the binary
@@ -15,7 +15,13 @@ pub struct Instruction {
 }
 
 impl Instruction {
-    pub fn new(mnemonic: &'static str, opcode: u8, addressing_mode: AddressingMode, cycles: u8, bytes: u8) -> Self {
+    pub fn new(
+        mnemonic: &'static str,
+        opcode: u8,
+        addressing_mode: AddressingMode,
+        cycles: u8,
+        bytes: u8,
+    ) -> Self {
         Instruction {
             mnemonic,
             opcode,
@@ -36,7 +42,7 @@ lazy_static! {
         map.insert(0x09, Instruction::new("ORA", 0x09, AddressingMode::Immediate, 2, 2));
         map.insert(0x05, Instruction::new("ORA", 0x05, AddressingMode::ZeroPage, 3, 2));
         map.insert(0x15, Instruction::new("ORA", 0x15, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0x0D, Instruction::new("ORA", 0x0D, AddressingMode::Absolute, 4, 3));        
+        map.insert(0x0D, Instruction::new("ORA", 0x0D, AddressingMode::Absolute, 4, 3));
         map.insert(0x1D, Instruction::new("ORA", 0x1D, AddressingMode::AbsoluteX, 4, 3));
         map.insert(0x19, Instruction::new("ORA", 0x19, AddressingMode::AbsoluteY, 4, 3));
         map.insert(0x01, Instruction::new("ORA", 0x01, AddressingMode::IndirectX, 6, 2));
@@ -170,9 +176,9 @@ lazy_static! {
 #[allow(dead_code)]
 const PROGRAM_ADDRESS: u16 = 0x8000;
 
-/// Represents the 6502 CPU, including registers, program counter, 
+/// Represents the 6502 CPU, including registers, program counter,
 /// stack pointer, status flags, memory, and cycle count.
-/// Provides methods for executing instructions, managing memory, 
+/// Provides methods for executing instructions, managing memory,
 /// and simulating CPU behavior.
 pub struct Cpu {
     // Accumulator
@@ -192,7 +198,7 @@ pub struct Cpu {
     // Points to an address somewhere in the memory (bus)
     // Incremented/decremented as we pull things from the stack
     pub sp: u8,
-    
+
     // Status register
     pub p: StatusFlag,
     pub memory: [u8; 0xFFFF],
@@ -211,8 +217,7 @@ impl Memory for Cpu {
 
 impl Cpu {
     pub fn new() -> Self {
-        Cpu 
-        {
+        Cpu {
             a: 0,
             x: 0,
             y: 0,
@@ -253,11 +258,15 @@ impl Cpu {
         let start = address as usize;
         let end = start + program.len();
         if end > self.memory.len() {
-            panic!("Program does not fit in memory: end address {:#X} exceeds memory size {:#X}", end, self.memory.len());
+            panic!(
+                "Program does not fit in memory: end address {:#X} exceeds memory size {:#X}",
+                end,
+                self.memory.len()
+            );
         }
         self.memory[start..end].copy_from_slice(&program);
         self.write_word(0xFFFC, address);
-
+        self.reset();
         self.disassemble(start as u16, end as u16);
     }
 
@@ -270,130 +279,652 @@ impl Cpu {
                 println!("PC: {:#X}", self.pc);
                 let upper_address = self.pc + 4;
                 self.disassemble(self.pc, upper_address);
-            }           
+            }
 
             self.pc += 1;
-            
+
             // get instruction metadata for opcode
             if INSTRUCTIONS.get(&opcode).is_none() {
                 continue;
             }
 
-            let instruction = INSTRUCTIONS
-                .get(&opcode)
-                .unwrap();
-        
+            let instruction = INSTRUCTIONS.get(&opcode).unwrap();
+
             // get operand address for instruction
             let operand_address = self.get_operand_address(instruction);
-            
+
             match instruction.opcode {
-                0x00 => { self.brk(operand_address, &instruction.addressing_mode); break; },
-                0xA9 => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xA5 => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xB5 => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xAD => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xBD => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xB9 => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xA1 => { self.lda(operand_address, &instruction.addressing_mode); },
-                0xB1 => { self.lda(operand_address, &instruction.addressing_mode); },
-                
-                0x09 => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x05 => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x15 => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x0D => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x1D => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x19 => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x01 => { self.ora( operand_address, &instruction.addressing_mode); },
-                0x11 => { self.ora( operand_address, &instruction.addressing_mode); },
-                
-                0xC9 => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xC5 => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xD5 => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xCD => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xDD => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xD9 => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xC1 => { self.cmp(operand_address, &instruction.addressing_mode); },
-                0xD1 => { self.cmp(operand_address, &instruction.addressing_mode); },
+                0x00 => {
+                    self.brk(operand_address, &instruction.addressing_mode);
+                    break;
+                }
+                0xA9 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xA5 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xB5 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xAD => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xBD => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xB9 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xA1 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xB1 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
 
-                0xE0 => { self.cpx(operand_address, &instruction.addressing_mode); },
-                0xE4 => { self.cpx(operand_address, &instruction.addressing_mode); },
-                0xEC => { self.cpx(operand_address, &instruction.addressing_mode); },
-                0xC0 => { self.cpy(operand_address, &instruction.addressing_mode); },
-                0xC4 => { self.cpy(operand_address, &instruction.addressing_mode); },
-                0xCC => { self.cpy(operand_address, &instruction.addressing_mode); },
-                
-                0xA2 => { self.ldx(operand_address, &instruction.addressing_mode); },
-                0xA6 => { self.ldx(operand_address, &instruction.addressing_mode); },
-                0xB6 => { self.ldx(operand_address, &instruction.addressing_mode); },
-                0xAE => { self.ldx(operand_address, &instruction.addressing_mode); },
-                0xBE => { self.ldx(operand_address, &instruction.addressing_mode); },
+                0x09 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x05 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x15 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x0D => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x1D => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x19 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x01 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x11 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
 
-                0xA0 => { self.ldy(operand_address, &instruction.addressing_mode); },
-                0xA4 => { self.ldy(operand_address, &instruction.addressing_mode); },
-                0xB4 => { self.ldy(operand_address, &instruction.addressing_mode); },
-                0xAC => { self.ldy(operand_address, &instruction.addressing_mode); },
-                0xBC => { self.ldy(operand_address, &instruction.addressing_mode); },
+                0xC9 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xC5 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xD5 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xCD => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xDD => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xD9 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xC1 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xD1 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
 
-                0xAA => { self.tax(); },
-                0xE8 => { self.inx(); },
-                0xEA => { self.nop(); },
-                0x4C => { self.jmp(operand_address); },
-                0x8D => { self.sta(operand_address); },
-                0x8A => { self.txa(); },
-                0x98 => { self.tya(); },
-                0xA8 => { self.tay(); },
-                0xC8 => { self.iny(); },
-                0xCA => { self.dex(); },
-                0x88 => { self.dey(); },
-                0x40 => { self.rti(); },
-                0x60 => { self.rts(); },
+                0xE0 => {
+                    self.cpx(operand_address, &instruction.addressing_mode);
+                }
+                0xE4 => {
+                    self.cpx(operand_address, &instruction.addressing_mode);
+                }
+                0xEC => {
+                    self.cpx(operand_address, &instruction.addressing_mode);
+                }
+                0xC0 => {
+                    self.cpy(operand_address, &instruction.addressing_mode);
+                }
+                0xC4 => {
+                    self.cpy(operand_address, &instruction.addressing_mode);
+                }
+                0xCC => {
+                    self.cpy(operand_address, &instruction.addressing_mode);
+                }
+
+                0xA2 => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xA6 => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xB6 => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xAE => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xBE => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+
+                0xA0 => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xA4 => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xB4 => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xAC => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xBC => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+
+                0xAA => {
+                    self.tax();
+                }
+                0xE8 => {
+                    self.inx();
+                }
+                0xEA => {
+                    self.nop();
+                }
+                0x4C => {
+                    self.jmp(operand_address);
+                }
+                0x8D => {
+                    self.sta(operand_address);
+                }
+                0x8A => {
+                    self.txa();
+                }
+                0x98 => {
+                    self.tya();
+                }
+                0xA8 => {
+                    self.tay();
+                }
+                0xC8 => {
+                    self.iny();
+                }
+                0xCA => {
+                    self.dex();
+                }
+                0x88 => {
+                    self.dey();
+                }
+                0x40 => {
+                    self.rti();
+                }
+                0x60 => {
+                    self.rts();
+                }
                 // jump
-                0xB0 => { self.bcs(operand_address); },
-                0x90 => { self.bcc(operand_address); },
-                0xF0 => { self.beq(operand_address); },
-                0xD0 => { self.bne(operand_address); },
-                0x10 => { self.bpl(operand_address); },
-                0x20 => { self.jsr(operand_address); },
-                0x30 => { self.bim(operand_address); },
+                0xB0 => {
+                    self.bcs(operand_address);
+                }
+                0x90 => {
+                    self.bcc(operand_address);
+                }
+                0xF0 => {
+                    self.beq(operand_address);
+                }
+                0xD0 => {
+                    self.bne(operand_address);
+                }
+                0x10 => {
+                    self.bpl(operand_address);
+                }
+                0x20 => {
+                    self.jsr(operand_address);
+                }
+                0x30 => {
+                    self.bim(operand_address);
+                }
 
-                0x69 => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x65 => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x75 => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x6D => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x7D => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x79 => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x61 => { self.adc(operand_address, &instruction.addressing_mode); },
-                0x71 => { self.adc(operand_address, &instruction.addressing_mode); },
+                0x69 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x65 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x75 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x6D => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x7D => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x79 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x61 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x71 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
 
-                0xE9 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xE5 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xF5 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xED => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xFD => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xF9 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xE1 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xF1 => { self.sbc(operand_address, &instruction.addressing_mode); },
-                0xC6 => { self.dec(operand_address, &instruction.addressing_mode); },
-                0xD6 => { self.dec(operand_address, &instruction.addressing_mode); },
-                0xCE => { self.dec(operand_address, &instruction.addressing_mode); },
-                0xDE => { self.dec(operand_address, &instruction.addressing_mode); },
+                0xE9 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xE5 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xF5 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xED => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xFD => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xF9 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xE1 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xF1 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xC6 => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+                0xD6 => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+                0xCE => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+                0xDE => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
 
-                0x89 => { self.bit(operand_address, &instruction.addressing_mode); },
-                0x3C => { self.bit(operand_address, &instruction.addressing_mode); },
-                0x24 => { self.bit(operand_address, &instruction.addressing_mode); },
-                0x34 => { self.bit(operand_address, &instruction.addressing_mode); },
+                0x89 => {
+                    self.bit(operand_address, &instruction.addressing_mode);
+                }
+                0x3C => {
+                    self.bit(operand_address, &instruction.addressing_mode);
+                }
+                0x24 => {
+                    self.bit(operand_address, &instruction.addressing_mode);
+                }
+                0x34 => {
+                    self.bit(operand_address, &instruction.addressing_mode);
+                }
 
-                0x4A => { self.lsr(operand_address, &instruction.addressing_mode); },
-                0x46 => { self.lsr(operand_address, &instruction.addressing_mode); },
-                0x56 => { self.lsr(operand_address, &instruction.addressing_mode); },
-                0x4E => { self.lsr(operand_address, &instruction.addressing_mode); },
-                0x5E => { self.lsr(operand_address, &instruction.addressing_mode); },
+                0x4A => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x46 => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x56 => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x4E => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x5E => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
 
                 _ => panic!("Instruction {} not implemented!", instruction.mnemonic),
             };
 
             self.pc += instruction.bytes as u16 - 1; // adjust PC for instruction length
         }
+    }
+
+    pub fn step(&mut self) -> bool {
+        // Execute one instruction and return true if should continue
+        let opcode = self.read_byte(self.pc);
+
+        self.pc += 1;
+
+        // Check if it's a BRK instruction (end of program)
+        if opcode == 0x00 {
+            return false; // Stop execution
+        }
+
+        // get instruction metadata for opcode
+        if let Some(instruction) = INSTRUCTIONS.get(&opcode) {
+            // get operand address for instruction
+            let operand_address = self.get_operand_address(instruction);
+
+            match instruction.opcode {
+                // LDA instructions
+                0xA9 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xA5 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xB5 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xAD => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xBD => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xB9 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xA1 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+                0xB1 => {
+                    self.lda(operand_address, &instruction.addressing_mode);
+                }
+
+                // ORA instructions
+                0x09 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x05 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x15 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x0D => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x1D => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x19 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x01 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+                0x11 => {
+                    self.ora(operand_address, &instruction.addressing_mode);
+                }
+
+                // CMP instructions
+                0xC9 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xC5 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xD5 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xCD => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xDD => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xD9 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xC1 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+                0xD1 => {
+                    self.cmp(operand_address, &instruction.addressing_mode);
+                }
+
+                // CPX instructions
+                0xE0 => {
+                    self.cpx(operand_address, &instruction.addressing_mode);
+                }
+                0xE4 => {
+                    self.cpx(operand_address, &instruction.addressing_mode);
+                }
+                0xEC => {
+                    self.cpx(operand_address, &instruction.addressing_mode);
+                }
+
+                // CPY instructions
+                0xC0 => {
+                    self.cpy(operand_address, &instruction.addressing_mode);
+                }
+                0xC4 => {
+                    self.cpy(operand_address, &instruction.addressing_mode);
+                }
+                0xCC => {
+                    self.cpy(operand_address, &instruction.addressing_mode);
+                }
+
+                // Transfer instructions
+                0xAA => {
+                    self.tax();
+                }
+                0xA8 => {
+                    self.tay();
+                }
+                0x8A => {
+                    self.txa();
+                }
+                0x98 => {
+                    self.tya();
+                }
+                0xE8 => {
+                    self.inx();
+                }
+                0xC8 => {
+                    self.iny();
+                }
+                0xCA => {
+                    self.dex();
+                }
+                0x88 => {
+                    self.dey();
+                }
+
+                // STA instructions
+                0x85 => {
+                    self.sta(operand_address);
+                }
+                0x95 => {
+                    self.sta(operand_address);
+                }
+                0x8D => {
+                    self.sta(operand_address);
+                }
+                0x9D => {
+                    self.sta(operand_address);
+                }
+                0x99 => {
+                    self.sta(operand_address);
+                }
+                0x81 => {
+                    self.sta(operand_address);
+                }
+                0x91 => {
+                    self.sta(operand_address);
+                }
+
+                // LDX instructions
+                0xA2 => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xA6 => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xB6 => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xAE => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+                0xBE => {
+                    self.ldx(operand_address, &instruction.addressing_mode);
+                }
+
+                // LDY instructions
+                0xA0 => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xA4 => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xB4 => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xAC => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+                0xBC => {
+                    self.ldy(operand_address, &instruction.addressing_mode);
+                }
+
+                // Jump and subroutine instructions
+                0x20 => {
+                    self.jsr(operand_address);
+                }
+                0x60 => {
+                    self.rts();
+                }
+                0x4C => {
+                    self.jmp(operand_address);
+                }
+
+                // Branch instructions
+                0x10 => {
+                    self.bpl(operand_address);
+                }
+                0x30 => {
+                    self.bim(operand_address);
+                }
+                0x90 => {
+                    self.bcc(operand_address);
+                }
+                0xB0 => {
+                    self.bcs(operand_address);
+                }
+                0xD0 => {
+                    self.bne(operand_address);
+                }
+                0xF0 => {
+                    self.beq(operand_address);
+                }
+
+                // BIT instructions
+                0x24 => {
+                    self.bit(operand_address, &instruction.addressing_mode);
+                }
+                0x2C => {
+                    self.bit(operand_address, &instruction.addressing_mode);
+                }
+
+                // ADC instructions
+                0x69 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x65 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x75 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x6D => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x7D => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x79 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x61 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+                0x71 => {
+                    self.adc(operand_address, &instruction.addressing_mode);
+                }
+
+                // SBC instructions
+                0xE9 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xE5 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xF5 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xED => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xFD => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xF9 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xE1 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+                0xF1 => {
+                    self.sbc(operand_address, &instruction.addressing_mode);
+                }
+
+                // LSR instructions
+                0x4A => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x46 => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x56 => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x4E => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+                0x5E => {
+                    self.lsr(operand_address, &instruction.addressing_mode);
+                }
+
+                // DEC instructions
+                0xC6 => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+                0xD6 => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+                0xCE => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+                0xDE => {
+                    self.dec(operand_address, &instruction.addressing_mode);
+                }
+
+                // Flag instructions
+                0x18 => {
+                    self.set_flag(StatusFlag::Carry, false);
+                } // CLC
+                0x38 => {
+                    self.set_flag(StatusFlag::Carry, true);
+                } // SEC
+
+                0xEA => { /* NOP - do nothing */ }
+
+                _ => {
+                    println!("Unknown opcode: {:#X}", instruction.opcode);
+                }
+            }
+        } else {
+            println!("Unknown opcode: {:#X}", opcode);
+        }
+
+        true // Continue execution
     }
 
     fn get_operand_address(&self, instruction: &Instruction) -> u16 {
@@ -425,7 +956,10 @@ impl Cpu {
                 ((hi << 8) | lo).wrapping_add(self.y as u16)
             }
             AddressingMode::Implied => 0, // Implied has no operand address
-            AddressingMode::None => panic!("Addressing mode {} not supported!", instruction.addressing_mode),
+            AddressingMode::None => panic!(
+                "Addressing mode {} not supported!",
+                instruction.addressing_mode
+            ),
         }
     }
 
@@ -435,16 +969,14 @@ impl Cpu {
 
     // branch on carry set
     fn bcs(&mut self, address: u16) {
-        if self.get_flag(StatusFlag::Carry) 
-        {
+        if self.get_flag(StatusFlag::Carry) {
             self.pc = address;
         }
     }
 
     // branch on carry clear
     fn bcc(&mut self, address: u16) {
-        if !self.get_flag(StatusFlag::Carry)
-        {
+        if !self.get_flag(StatusFlag::Carry) {
             self.pc = address;
         }
     }
@@ -477,8 +1009,7 @@ impl Cpu {
     }
 
     // transfer accumulator to X register
-    fn txa(&mut self) 
-    {
+    fn txa(&mut self) {
         self.a = self.x;
         self.set_flag(StatusFlag::Zero, self.a == 0);
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
@@ -548,7 +1079,7 @@ impl Cpu {
         // Pull status from stack (with B flag ignored)
         let status = self.pull_stack();
         self.p = StatusFlag::from_bits_truncate(status & 0b1110_1111 | 0b0010_0000); // Set unused flag
-        // Pull PC from stack (low then high)
+                                                                                     // Pull PC from stack (low then high)
         let pcl = self.pull_stack();
         let pch = self.pull_stack();
         self.pc = (pch as u16) << 8 | (pcl as u16);
@@ -566,8 +1097,7 @@ impl Cpu {
 
     // load accumulator with value at address
     fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode 
-        {
+        let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
         };
@@ -579,8 +1109,7 @@ impl Cpu {
 
     // OR memory with accumulator
     fn ora(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode 
-        {
+        let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
         };
@@ -597,7 +1126,11 @@ impl Cpu {
             _ => self.read_byte(address),
         };
 
-        let carry = if self.get_flag(StatusFlag::Carry) { 1 } else { 0 };
+        let carry = if self.get_flag(StatusFlag::Carry) {
+            1
+        } else {
+            0
+        };
         let (sum1, carry1) = self.a.overflowing_add(value);
         let (sum2, carry2) = sum1.overflowing_add(carry);
         self.set_flag(StatusFlag::Carry, carry1 || carry2);
@@ -620,7 +1153,11 @@ impl Cpu {
             _ => self.read_byte(address),
         };
 
-        let carry = if self.get_flag(StatusFlag::Carry) { 1 } else { 0 };
+        let carry = if self.get_flag(StatusFlag::Carry) {
+            1
+        } else {
+            0
+        };
         let value = value ^ 0xFF; // one's complement for subtraction
         let (sum1, carry1) = self.a.overflowing_add(value);
         let (sum2, carry2) = sum1.overflowing_add(carry);
@@ -696,25 +1233,78 @@ impl Cpu {
                 for i in 1..instr.bytes {
                     bytes.push(self.read_byte(pc + i as u16));
                 }
-                
+
                 let byte_str = bytes
                     .iter()
                     .map(|b| format!("{:02X}", b))
                     .collect::<Vec<_>>()
                     .join(" ");
 
-                println!("${:04X}: {:8} {} {:?}", 
-                    pc, 
-                    byte_str, 
-                    instr.mnemonic, 
-                    instr.addressing_mode);
+                println!(
+                    "${:04X}: {:8} {} {:?}",
+                    pc, byte_str, instr.mnemonic, instr.addressing_mode
+                );
 
                 pc += instr.bytes as u16;
-            }
-            else {
+            } else {
                 println!("${:04X}: {:02X}    ???", pc, opcode);
                 pc += 1;
             }
+        }
+    }
+
+    pub fn disassemble_to_string(&self, start: u16, end: u16) -> Vec<String> {
+        let mut result = Vec::new();
+        let mut pc = start;
+        while pc < end {
+            let opcode = self.read_byte(pc);
+            if let Some(instr) = INSTRUCTIONS.get(&opcode) {
+                let mut bytes = vec![opcode];
+                for i in 1..instr.bytes {
+                    bytes.push(self.read_byte(pc + i as u16));
+                }
+
+                let byte_str = bytes
+                    .iter()
+                    .map(|b| format!("{:02X}", b))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                result.push(format!(
+                    "${:04X}: {:8} {} {:?}",
+                    pc, byte_str, instr.mnemonic, instr.addressing_mode
+                ));
+
+                pc += instr.bytes as u16;
+            } else {
+                result.push(format!("${:04X}: {:02X}    ???", pc, opcode));
+                pc += 1;
+            }
+        }
+        result
+    }
+
+    pub fn disassemble_current_instruction(&self) -> String {
+        let pc = self.pc;
+        let opcode = self.read_byte(pc);
+        if let Some(instr) = INSTRUCTIONS.get(&opcode) {
+            let mut bytes = vec![opcode];
+            for i in 1..instr.bytes {
+                bytes.push(self.read_byte(pc + i as u16));
+            }
+
+            let byte_str = bytes
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            format!(
+                "${:04X}: {:8} {} {:?}",
+                pc, byte_str, instr.mnemonic, instr.addressing_mode
+            )
+        } else {
+            format!("${:04X}: {:02X}    ???", pc, opcode)
         }
     }
 
@@ -753,7 +1343,7 @@ impl Cpu {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
         };
-        
+
         let result = self.a & value;
         self.set_flag(StatusFlag::Zero, result == 0);
         self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
@@ -789,6 +1379,10 @@ impl Cpu {
         self.write_byte(address, value);
         self.set_flag(StatusFlag::Zero, value == 0);
         self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
+    }
+
+    pub fn get_pc(&self) -> u16 {
+        self.pc
     }
 }
 
@@ -853,8 +1447,8 @@ mod tests {
         let mut cpu = Cpu::new();
         let program = vec![0x42, 0x42];
         cpu.load_program(program, PROGRAM_ADDRESS);
-        assert_eq!(cpu.read_byte(PROGRAM_ADDRESS+0), 0x42);
-        assert_eq!(cpu.read_byte(PROGRAM_ADDRESS+1), 0x42);
+        assert_eq!(cpu.read_byte(PROGRAM_ADDRESS + 0), 0x42);
+        assert_eq!(cpu.read_byte(PROGRAM_ADDRESS + 1), 0x42);
     }
 
     #[test]
@@ -864,7 +1458,6 @@ mod tests {
         // TAX          /* copy A to X */
         // INX          /* increment X */
         // BRK          /* break */
-
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS);
         cpu.pc = PROGRAM_ADDRESS;
@@ -907,9 +1500,9 @@ mod tests {
     fn test_lda_zeropage() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x77); // value at $10
-        cpu.load_program( vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS);
         cpu.pc = 0x8000;
         cpu.run(true);
         assert_eq!(cpu.a, 0x77);
-    }    
+    }
 }

@@ -1,6 +1,5 @@
 [package]
 name = "madnes"
-path = "src/lib.rs"
 authors = ["John Stark"]
 version = "0.1.0"
 edition = "2021"
@@ -16,7 +15,5 @@ path = "src/lib.rs"
 [dependencies]
 lazy_static = "1.5.0"
 bitflags = "2.6.0"
-piston = "1.0.0"
-piston2d-graphics = "0.44.0"
-pistoncore-glutin_window = "0.72.0"
-piston2d-opengl_graphics = "0.85.0"
+sdl2 = { version = "0.37", features = ["image", "ttf"] }
+clap = { version = "4.0", features = ["derive"] }
