@@ -1,7 +1,17 @@
 [package]
-name = "madNES"
+name = "madnes"
+path = "src/lib.rs"
+authors = ["John Stark"]
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "madnes"
+path = "src/main.rs"
+
+[lib]
+name = "madnes"
+path = "src/lib.rs"
 
 [dependencies]
 lazy_static = "1.5.0"

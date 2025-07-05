@@ -1,13 +1,33 @@
-use lazy_static::lazy_static;
-use std::collections::HashMap;
-use bitflags::bitflags;
-use crate::instruction::{Instruction};
-use crate::memory::Memory;
+use crate::cpu::memory::AddressingMode;
+use crate::cpu::memory::Memory;
 
-lazy_static!
-{
-    static ref INSTRUCTIONS: HashMap<u8, Instruction> = 
-    {
+use bitflags::bitflags;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+
+pub struct Instruction {
+    // fixed set of strings for the instructions that are stored in the binary
+    pub mnemonic: &'static str,
+    pub opcode: u8,
+    pub addressing_mode: AddressingMode,
+    pub cycles: u8,
+    pub bytes: u8,
+}
+
+impl Instruction {
+    pub fn new(mnemonic: &'static str, opcode: u8, addressing_mode: AddressingMode, cycles: u8, bytes: u8) -> Self {
+        Instruction {
+            mnemonic,
+            opcode,
+            addressing_mode,
+            cycles,
+            bytes,
+        }
+    }
+}
+
+lazy_static! {
+    pub static ref INSTRUCTIONS: HashMap<u8, Instruction> = {
         let mut map = HashMap::new();
         // interrupts
         map.insert(0x00, Instruction::new("BRK", 0x00, AddressingMode::Implied, 7, 1));
@@ -154,8 +174,7 @@ const PROGRAM_ADDRESS: u16 = 0x8000;
 /// stack pointer, status flags, memory, and cycle count.
 /// Provides methods for executing instructions, managing memory, 
 /// and simulating CPU behavior.
-pub struct Cpu 
-{
+pub struct Cpu {
     // Accumulator
     pub a: u8,
 
@@ -180,8 +199,7 @@ pub struct Cpu
     pub cycles: u8,
 }
 
-impl Memory for Cpu 
-{
+impl Memory for Cpu {
     fn read_byte(&self, address: u16) -> u8 {
         self.memory[address as usize]
     }
@@ -191,10 +209,8 @@ impl Memory for Cpu
     }
 }
 
-impl Cpu 
-{
-    pub fn new() -> Self 
-    {
+impl Cpu {
+    pub fn new() -> Self {
         Cpu 
         {
             a: 0,
@@ -208,8 +224,7 @@ impl Cpu
         }
     }
 
-    pub fn reset(&mut self) 
-    {
+    pub fn reset(&mut self) {
         self.a = 0;
         self.x = 0;
         self.y = 0;
@@ -246,15 +261,12 @@ impl Cpu
         self.disassemble(start as u16, end as u16);
     }
 
-    pub fn run(&mut self, show_disassembly: bool) 
-    {
-        loop 
-        {
+    pub fn run(&mut self, show_disassembly: bool) {
+        loop {
             // get opcode at program counter
             let opcode = self.read_byte(self.pc);
 
-            if show_disassembly 
-            {
+            if show_disassembly {
                 println!("PC: {:#X}", self.pc);
                 let upper_address = self.pc + 4;
                 self.disassemble(self.pc, upper_address);
@@ -263,9 +275,8 @@ impl Cpu
             self.pc += 1;
             
             // get instruction metadata for opcode
-            if INSTRUCTIONS.get(&opcode).is_none() 
-            {
-                continue;    
+            if INSTRUCTIONS.get(&opcode).is_none() {
+                continue;
             }
 
             let instruction = INSTRUCTIONS
@@ -275,8 +286,7 @@ impl Cpu
             // get operand address for instruction
             let operand_address = self.get_operand_address(instruction);
             
-            match instruction.opcode 
-            {
+            match instruction.opcode {
                 0x00 => { self.brk(operand_address, &instruction.addressing_mode); break; },
                 0xA9 => { self.lda(operand_address, &instruction.addressing_mode); },
                 0xA5 => { self.lda(operand_address, &instruction.addressing_mode); },
@@ -424,8 +434,7 @@ impl Cpu
     }
 
     // branch on carry set
-    fn bcs(&mut self, address: u16) 
-    {
+    fn bcs(&mut self, address: u16) {
         if self.get_flag(StatusFlag::Carry) 
         {
             self.pc = address;
@@ -433,8 +442,7 @@ impl Cpu
     }
 
     // branch on carry clear
-    fn bcc(&mut self, address: u16)
-    {
+    fn bcc(&mut self, address: u16) {
         if !self.get_flag(StatusFlag::Carry)
         {
             self.pc = address;
@@ -464,8 +472,7 @@ impl Cpu
     }
 
     // store accumulator in memory
-    fn sta(&mut self, address: u16) 
-    {
+    fn sta(&mut self, address: u16) {
         self.write_byte(address, self.a);
     }
 
@@ -513,8 +520,7 @@ impl Cpu
     }
 
     // load X register with value at address
-    fn ldx(&mut self, address: u16, addressing_mode: &AddressingMode) 
-    {
+    fn ldx(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
@@ -526,8 +532,7 @@ impl Cpu
     }
 
     // load Y register with value at address
-    fn ldy(&mut self, address: u16, addressing_mode: &AddressingMode)
-    {
+    fn ldy(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
@@ -560,8 +565,7 @@ impl Cpu
     }
 
     // load accumulator with value at address
-    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) 
-    {
+    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode 
         {
             AddressingMode::Immediate => self.read_byte(address),
@@ -574,8 +578,7 @@ impl Cpu
     }
 
     // OR memory with accumulator
-    fn ora(&mut self, address: u16, addressing_mode: &AddressingMode) 
-    {
+    fn ora(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode 
         {
             AddressingMode::Immediate => self.read_byte(address),
@@ -588,8 +591,7 @@ impl Cpu
     }
 
     // add memory to accumulator with carry
-    fn adc(&mut self, address: u16, addressing_mode: &AddressingMode) 
-    {
+    fn adc(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
@@ -612,8 +614,7 @@ impl Cpu
     // Note: 6502 uses two's complement for subtraction
     // so we need to invert the bits of the value and add 1
     // to perform the subtraction.
-    fn sbc(&mut self, address: u16, addressing_mode: &AddressingMode)
-    {
+    fn sbc(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
@@ -686,17 +687,13 @@ impl Cpu
         }
     }
 
-    pub fn disassemble(&self, start: u16, end: u16)
-    {
+    pub fn disassemble(&self, start: u16, end: u16) {
         let mut pc = start;
-        while pc < end 
-        {
+        while pc < end {
             let opcode = self.read_byte(pc);
-            if let Some(instr) = INSTRUCTIONS.get(&opcode) 
-            {
+            if let Some(instr) = INSTRUCTIONS.get(&opcode) {
                 let mut bytes = vec![opcode];
-                for i in 1..instr.bytes 
-                {
+                for i in 1..instr.bytes {
                     bytes.push(self.read_byte(pc + i as u16));
                 }
                 
@@ -714,8 +711,7 @@ impl Cpu
 
                 pc += instr.bytes as u16;
             }
-            else 
-            {
+            else {
                 println!("${:04X}: {:02X}    ???", pc, opcode);
                 pc += 1;
             }
@@ -723,8 +719,7 @@ impl Cpu
     }
 
     // Jump to SubRoutine
-    fn jsr(&mut self, address: u16) 
-    {
+    fn jsr(&mut self, address: u16) {
         let return_addr = self.pc + 1;
         self.push_stack((return_addr >> 8) as u8); // push high byte
         self.push_stack((return_addr & 0xFF) as u8); // push low byte
@@ -732,36 +727,33 @@ impl Cpu
     }
 
     // Return from Subroutine
-    fn rts(&mut self) 
-    {
+    fn rts(&mut self) {
         let pcl = self.pull_stack();
         let pch = self.pull_stack();
         self.pc = ((pch as u16) << 8 | (pcl as u16)).wrapping_add(1);
     }
 
     // branch on minus (negative flag set)
-    fn bim(&mut self, address: u16) 
-    {
+    fn bim(&mut self, address: u16) {
         if self.get_flag(StatusFlag::Negative) {
             self.pc = address;
         }
     }
 
     // branch on plus (negative flag clear)
-    fn bpl(&mut self, address: u16)
-    {
+    fn bpl(&mut self, address: u16) {
         if !self.get_flag(StatusFlag::Negative) {
             self.pc = address;
         }
     }
 
     // test bits in memory with accumulator
-    fn bit(&mut self, address: u16, addressing_mode: &AddressingMode) 
-    {
+    fn bit(&mut self, address: u16, addressing_mode: &AddressingMode) {
         let value = match addressing_mode {
             AddressingMode::Immediate => self.read_byte(address),
             _ => self.read_byte(address),
         };
+        
         let result = self.a & value;
         self.set_flag(StatusFlag::Zero, result == 0);
         self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
@@ -769,20 +761,16 @@ impl Cpu
     }
 
     // Logical Shift Right
-    fn lsr(&mut self, address: u16, addressing_mode: &AddressingMode) 
-    {
-        match addressing_mode 
-        {
-            AddressingMode::Implied => 
-            {
+    fn lsr(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        match addressing_mode {
+            AddressingMode::Implied => {
                 let carry = self.a & 0x01 != 0;
                 self.a >>= 1;
                 self.set_flag(StatusFlag::Carry, carry);
                 self.set_flag(StatusFlag::Zero, self.a == 0);
                 self.set_flag(StatusFlag::Negative, false);
             }
-            _ => 
-            {
+            _ => {
                 let mut value = self.read_byte(address);
                 let carry = value & 0x01 != 0;
                 value >>= 1;
@@ -795,8 +783,7 @@ impl Cpu
     }
 
     // Decrement memory
-    fn dec(&mut self, address: u16, _addressing_mode: &AddressingMode) 
-    {
+    fn dec(&mut self, address: u16, _addressing_mode: &AddressingMode) {
         let mut value = self.read_byte(address);
         value = value.wrapping_sub(1);
         self.write_byte(address, value);
@@ -805,50 +792,9 @@ impl Cpu
     }
 }
 
-use std::fmt;
-
-#[derive(Debug)]
-pub enum AddressingMode 
-{
-    None,
-    Immediate,
-    Implied,
-    IndirectX,
-    IndirectY,
-    ZeroPage,
-    ZeroPageX,
-    ZeroPageY,
-    Absolute,
-    AbsoluteX,
-    AbsoluteY,
-}
-
-impl fmt::Display for AddressingMode 
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result 
-    {
-        match self 
-        {
-            AddressingMode::None => write!(f, "None"),
-            AddressingMode::Immediate => write!(f, "Immediate"),
-            AddressingMode::Implied => write!(f, "Implied"),
-            AddressingMode::IndirectX => write!(f, "IndirectX"),
-            AddressingMode::IndirectY => write!(f, "IndirectY"),
-            AddressingMode::ZeroPage => write!(f, "ZeroPage"),
-            AddressingMode::ZeroPageX => write!(f, "ZeroPageX"),
-            AddressingMode::ZeroPageY => write!(f, "ZeroPageY"),
-            AddressingMode::Absolute => write!(f, "Absolute"),
-            AddressingMode::AbsoluteX => write!(f, "AbsoluteX"),
-            AddressingMode::AbsoluteY => write!(f, "AbsoluteY"),
-        }
-    }
-}
-
-bitflags! 
-{
+bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct StatusFlag: u8 
-    {
+    pub struct StatusFlag: u8 {
         const Carry = 1 << 0;
         const Zero = 1 << 1;
         const InterruptDisable = 1 << 2;
@@ -861,29 +807,25 @@ bitflags!
 }
 
 #[cfg(test)]
-mod tests 
-{
+mod tests {
     use super::*;
 
     #[test]
-    fn test_read_write_byte() 
-    {
+    fn test_read_write_byte() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x0000, 0x42);
         assert_eq!(cpu.read_byte(0x0000), 0x42);
     }
 
     #[test]
-    fn test_read_write_word() 
-    {
+    fn test_read_write_word() {
         let mut cpu = Cpu::new();
         cpu.write_word(0x0000, 0x4242);
         assert_eq!(cpu.read_word(0x0000), 0x4242);
     }
 
     #[test]
-    fn test_reset() 
-    {
+    fn test_reset() {
         let mut cpu = Cpu::new();
         cpu.write_word(0xFFFC, 0x4242);
         cpu.reset();
@@ -897,8 +839,7 @@ mod tests
     }
 
     #[test]
-    fn test_get_set_flag() 
-    {
+    fn test_get_set_flag() {
         let mut cpu = Cpu::new();
         let flag = StatusFlag::Carry;
         cpu.set_flag(flag, true);
@@ -908,8 +849,7 @@ mod tests
     }
 
     #[test]
-    fn test_load_program() 
-    {
+    fn test_load_program() {
         let mut cpu = Cpu::new();
         let program = vec![0x42, 0x42];
         cpu.load_program(program, PROGRAM_ADDRESS);
@@ -918,8 +858,7 @@ mod tests
     }
 
     #[test]
-    fn test_run_program_with_4_instructions() 
-    {
+    fn test_run_program_with_4_instructions() {
         // assembly:
         // LDA #$C0     /* load A with 0xC0 */
         // TAX          /* copy A to X */
@@ -934,8 +873,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_immediate() 
-    {
+    fn test_lda_immediate() {
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS);
         cpu.pc = PROGRAM_ADDRESS;
@@ -956,8 +894,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_negative_flag() 
-    {
+    fn test_lda_negative_flag() {
         let mut cpu = Cpu::new();
         cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS);
         cpu.pc = 0x8000;
@@ -967,8 +904,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_zeropage() 
-    {
+    fn test_lda_zeropage() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x77); // value at $10
         cpu.load_program( vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS);
