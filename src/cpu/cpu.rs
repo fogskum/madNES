@@ -272,315 +272,15 @@ impl Cpu {
 
     pub fn run(&mut self, show_disassembly: bool) {
         loop {
-            // get opcode at program counter
-            let opcode = self.read_byte(self.pc);
-
             if show_disassembly {
                 println!("PC: {:#X}", self.pc);
                 let upper_address = self.pc + 4;
                 self.disassemble(self.pc, upper_address);
             }
-
-            self.pc += 1;
-
-            // get instruction metadata for opcode
-            if INSTRUCTIONS.get(&opcode).is_none() {
-                continue;
+            
+            if !self.step() {
+                break;
             }
-
-            let instruction = INSTRUCTIONS.get(&opcode).unwrap();
-
-            // get operand address for instruction
-            let operand_address = self.get_operand_address(instruction);
-
-            match instruction.opcode {
-                0x00 => {
-                    self.brk(operand_address, &instruction.addressing_mode);
-                    break;
-                }
-                0xA9 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xA5 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xB5 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xAD => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xBD => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xB9 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xA1 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xB1 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-
-                0x09 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x05 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x15 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x0D => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x1D => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x19 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x01 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x11 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-
-                0xC9 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xC5 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xD5 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xCD => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xDD => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xD9 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xC1 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xD1 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-
-                0xE0 => {
-                    self.cpx(operand_address, &instruction.addressing_mode);
-                }
-                0xE4 => {
-                    self.cpx(operand_address, &instruction.addressing_mode);
-                }
-                0xEC => {
-                    self.cpx(operand_address, &instruction.addressing_mode);
-                }
-                0xC0 => {
-                    self.cpy(operand_address, &instruction.addressing_mode);
-                }
-                0xC4 => {
-                    self.cpy(operand_address, &instruction.addressing_mode);
-                }
-                0xCC => {
-                    self.cpy(operand_address, &instruction.addressing_mode);
-                }
-
-                0xA2 => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xA6 => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xB6 => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xAE => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xBE => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-
-                0xA0 => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xA4 => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xB4 => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xAC => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xBC => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-
-                0xAA => {
-                    self.tax();
-                }
-                0xE8 => {
-                    self.inx();
-                }
-                0xEA => {
-                    self.nop();
-                }
-                0x4C => {
-                    self.jmp(operand_address);
-                }
-                0x8D => {
-                    self.sta(operand_address);
-                }
-                0x8A => {
-                    self.txa();
-                }
-                0x98 => {
-                    self.tya();
-                }
-                0xA8 => {
-                    self.tay();
-                }
-                0xC8 => {
-                    self.iny();
-                }
-                0xCA => {
-                    self.dex();
-                }
-                0x88 => {
-                    self.dey();
-                }
-                0x40 => {
-                    self.rti();
-                }
-                0x60 => {
-                    self.rts();
-                }
-                // jump
-                0xB0 => {
-                    self.bcs(operand_address);
-                }
-                0x90 => {
-                    self.bcc(operand_address);
-                }
-                0xF0 => {
-                    self.beq(operand_address);
-                }
-                0xD0 => {
-                    self.bne(operand_address);
-                }
-                0x10 => {
-                    self.bpl(operand_address);
-                }
-                0x20 => {
-                    self.jsr(operand_address);
-                }
-                0x30 => {
-                    self.bim(operand_address);
-                }
-
-                0x69 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x65 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x75 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x6D => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x7D => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x79 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x61 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x71 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-
-                0xE9 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xE5 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xF5 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xED => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xFD => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xF9 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xE1 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xF1 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xC6 => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-                0xD6 => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-                0xCE => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-                0xDE => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-
-                0x89 => {
-                    self.bit(operand_address, &instruction.addressing_mode);
-                }
-                0x3C => {
-                    self.bit(operand_address, &instruction.addressing_mode);
-                }
-                0x24 => {
-                    self.bit(operand_address, &instruction.addressing_mode);
-                }
-                0x34 => {
-                    self.bit(operand_address, &instruction.addressing_mode);
-                }
-
-                0x4A => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x46 => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x56 => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x4E => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x5E => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-
-                _ => panic!("Instruction {} not implemented!", instruction.mnemonic),
-            };
-
-            self.pc += instruction.bytes as u16 - 1; // adjust PC for instruction length
         }
     }
 
@@ -590,340 +290,351 @@ impl Cpu {
 
         self.pc += 1;
 
-        // Check if it's a BRK instruction (end of program)
-        if opcode == 0x00 {
-            return false; // Stop execution
-        }
-
         // get instruction metadata for opcode
-        if let Some(instruction) = INSTRUCTIONS.get(&opcode) {
-            // get operand address for instruction
-            let operand_address = self.get_operand_address(instruction);
-
-            match instruction.opcode {
-                // LDA instructions
-                0xA9 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xA5 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xB5 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xAD => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xBD => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xB9 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xA1 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-                0xB1 => {
-                    self.lda(operand_address, &instruction.addressing_mode);
-                }
-
-                // ORA instructions
-                0x09 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x05 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x15 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x0D => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x1D => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x19 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x01 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-                0x11 => {
-                    self.ora(operand_address, &instruction.addressing_mode);
-                }
-
-                // CMP instructions
-                0xC9 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xC5 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xD5 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xCD => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xDD => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xD9 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xC1 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-                0xD1 => {
-                    self.cmp(operand_address, &instruction.addressing_mode);
-                }
-
-                // CPX instructions
-                0xE0 => {
-                    self.cpx(operand_address, &instruction.addressing_mode);
-                }
-                0xE4 => {
-                    self.cpx(operand_address, &instruction.addressing_mode);
-                }
-                0xEC => {
-                    self.cpx(operand_address, &instruction.addressing_mode);
-                }
-
-                // CPY instructions
-                0xC0 => {
-                    self.cpy(operand_address, &instruction.addressing_mode);
-                }
-                0xC4 => {
-                    self.cpy(operand_address, &instruction.addressing_mode);
-                }
-                0xCC => {
-                    self.cpy(operand_address, &instruction.addressing_mode);
-                }
-
-                // Transfer instructions
-                0xAA => {
-                    self.tax();
-                }
-                0xA8 => {
-                    self.tay();
-                }
-                0x8A => {
-                    self.txa();
-                }
-                0x98 => {
-                    self.tya();
-                }
-                0xE8 => {
-                    self.inx();
-                }
-                0xC8 => {
-                    self.iny();
-                }
-                0xCA => {
-                    self.dex();
-                }
-                0x88 => {
-                    self.dey();
-                }
-
-                // STA instructions
-                0x85 => {
-                    self.sta(operand_address);
-                }
-                0x95 => {
-                    self.sta(operand_address);
-                }
-                0x8D => {
-                    self.sta(operand_address);
-                }
-                0x9D => {
-                    self.sta(operand_address);
-                }
-                0x99 => {
-                    self.sta(operand_address);
-                }
-                0x81 => {
-                    self.sta(operand_address);
-                }
-                0x91 => {
-                    self.sta(operand_address);
-                }
-
-                // LDX instructions
-                0xA2 => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xA6 => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xB6 => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xAE => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-                0xBE => {
-                    self.ldx(operand_address, &instruction.addressing_mode);
-                }
-
-                // LDY instructions
-                0xA0 => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xA4 => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xB4 => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xAC => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-                0xBC => {
-                    self.ldy(operand_address, &instruction.addressing_mode);
-                }
-
-                // Jump and subroutine instructions
-                0x20 => {
-                    self.jsr(operand_address);
-                }
-                0x60 => {
-                    self.rts();
-                }
-                0x4C => {
-                    self.jmp(operand_address);
-                }
-
-                // Branch instructions
-                0x10 => {
-                    self.bpl(operand_address);
-                }
-                0x30 => {
-                    self.bim(operand_address);
-                }
-                0x90 => {
-                    self.bcc(operand_address);
-                }
-                0xB0 => {
-                    self.bcs(operand_address);
-                }
-                0xD0 => {
-                    self.bne(operand_address);
-                }
-                0xF0 => {
-                    self.beq(operand_address);
-                }
-
-                // BIT instructions
-                0x24 => {
-                    self.bit(operand_address, &instruction.addressing_mode);
-                }
-                0x2C => {
-                    self.bit(operand_address, &instruction.addressing_mode);
-                }
-
-                // ADC instructions
-                0x69 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x65 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x75 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x6D => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x7D => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x79 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x61 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-                0x71 => {
-                    self.adc(operand_address, &instruction.addressing_mode);
-                }
-
-                // SBC instructions
-                0xE9 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xE5 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xF5 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xED => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xFD => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xF9 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xE1 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-                0xF1 => {
-                    self.sbc(operand_address, &instruction.addressing_mode);
-                }
-
-                // LSR instructions
-                0x4A => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x46 => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x56 => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x4E => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-                0x5E => {
-                    self.lsr(operand_address, &instruction.addressing_mode);
-                }
-
-                // DEC instructions
-                0xC6 => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-                0xD6 => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-                0xCE => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-                0xDE => {
-                    self.dec(operand_address, &instruction.addressing_mode);
-                }
-
-                // Flag instructions
-                0x18 => {
-                    self.set_flag(StatusFlag::Carry, false);
-                } // CLC
-                0x38 => {
-                    self.set_flag(StatusFlag::Carry, true);
-                } // SEC
-
-                0xEA => { /* NOP - do nothing */ }
-
-                _ => {
-                    println!("Unknown opcode: {:#X}", instruction.opcode);
-                }
-            }
-        } else {
-            println!("Unknown opcode: {:#X}", opcode);
+        if INSTRUCTIONS.get(&opcode).is_none() {
+            return true; // Skip unknown instructions but continue
         }
 
+        let instruction = INSTRUCTIONS.get(&opcode).unwrap();
+
+        // get operand address for instruction
+        let operand_address = self.get_operand_address(instruction);
+
+        match instruction.opcode {
+            0x00 => {
+                self.brk(operand_address, &instruction.addressing_mode);
+                return false; // Stop execution on BRK
+            }
+            // LDA instructions
+            0xA9 => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xA5 => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xB5 => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xAD => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xBD => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xB9 => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xA1 => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+            0xB1 => {
+                self.lda(operand_address, &instruction.addressing_mode);
+            }
+
+            // ORA instructions
+            0x09 => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x05 => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x15 => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x0D => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x1D => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x19 => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x01 => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+            0x11 => {
+                self.ora(operand_address, &instruction.addressing_mode);
+            }
+
+            // CMP instructions
+            0xC9 => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xC5 => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xD5 => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xCD => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xDD => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xD9 => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xC1 => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+            0xD1 => {
+                self.cmp(operand_address, &instruction.addressing_mode);
+            }
+
+            // CPX instructions
+            0xE0 => {
+                self.cpx(operand_address, &instruction.addressing_mode);
+            }
+            0xE4 => {
+                self.cpx(operand_address, &instruction.addressing_mode);
+            }
+            0xEC => {
+                self.cpx(operand_address, &instruction.addressing_mode);
+            }
+
+            // CPY instructions
+            0xC0 => {
+                self.cpy(operand_address, &instruction.addressing_mode);
+            }
+            0xC4 => {
+                self.cpy(operand_address, &instruction.addressing_mode);
+            }
+            0xCC => {
+                self.cpy(operand_address, &instruction.addressing_mode);
+            }
+
+            // Transfer instructions
+            0xAA => {
+                self.tax();
+            }
+            0xA8 => {
+                self.tay();
+            }
+            0x8A => {
+                self.txa();
+            }
+            0x98 => {
+                self.tya();
+            }
+            0xE8 => {
+                self.inx();
+            }
+            0xC8 => {
+                self.iny();
+            }
+            0xCA => {
+                self.dex();
+            }
+            0x88 => {
+                self.dey();
+            }
+
+            // STA instructions
+            0x85 => {
+                self.sta(operand_address);
+            }
+            0x95 => {
+                self.sta(operand_address);
+            }
+            0x8D => {
+                self.sta(operand_address);
+            }
+            0x9D => {
+                self.sta(operand_address);
+            }
+            0x99 => {
+                self.sta(operand_address);
+            }
+            0x81 => {
+                self.sta(operand_address);
+            }
+            0x91 => {
+                self.sta(operand_address);
+            }
+
+            // LDX instructions
+            0xA2 => {
+                self.ldx(operand_address, &instruction.addressing_mode);
+            }
+            0xA6 => {
+                self.ldx(operand_address, &instruction.addressing_mode);
+            }
+            0xB6 => {
+                self.ldx(operand_address, &instruction.addressing_mode);
+            }
+            0xAE => {
+                self.ldx(operand_address, &instruction.addressing_mode);
+            }
+            0xBE => {
+                self.ldx(operand_address, &instruction.addressing_mode);
+            }
+
+            // LDY instructions
+            0xA0 => {
+                self.ldy(operand_address, &instruction.addressing_mode);
+            }
+            0xA4 => {
+                self.ldy(operand_address, &instruction.addressing_mode);
+            }
+            0xB4 => {
+                self.ldy(operand_address, &instruction.addressing_mode);
+            }
+            0xAC => {
+                self.ldy(operand_address, &instruction.addressing_mode);
+            }
+            0xBC => {
+                self.ldy(operand_address, &instruction.addressing_mode);
+            }
+
+            // Jump and subroutine instructions
+            0x20 => {
+                self.jsr(operand_address);
+            }
+            0x60 => {
+                self.rts();
+            }
+            0x4C => {
+                self.jmp(operand_address);
+            }
+
+            // Branch instructions
+            0x10 => {
+                self.bpl(operand_address);
+            }
+            0x30 => {
+                self.bim(operand_address);
+            }
+            0x90 => {
+                self.bcc(operand_address);
+            }
+            0xB0 => {
+                self.bcs(operand_address);
+            }
+            0xD0 => {
+                self.bne(operand_address);
+            }
+            0xF0 => {
+                self.beq(operand_address);
+            }
+
+            // BIT instructions
+            0x24 => {
+                self.bit(operand_address, &instruction.addressing_mode);
+            }
+            0x2C => {
+                self.bit(operand_address, &instruction.addressing_mode);
+            }
+
+            // ADC instructions
+            0x69 => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x65 => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x75 => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x6D => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x7D => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x79 => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x61 => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+            0x71 => {
+                self.adc(operand_address, &instruction.addressing_mode);
+            }
+
+            // SBC instructions
+            0xE9 => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xE5 => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xF5 => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xED => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xFD => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xF9 => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xE1 => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+            0xF1 => {
+                self.sbc(operand_address, &instruction.addressing_mode);
+            }
+
+            // LSR instructions
+            0x4A => {
+                self.lsr(operand_address, &instruction.addressing_mode);
+            }
+            0x46 => {
+                self.lsr(operand_address, &instruction.addressing_mode);
+            }
+            0x56 => {
+                self.lsr(operand_address, &instruction.addressing_mode);
+            }
+            0x4E => {
+                self.lsr(operand_address, &instruction.addressing_mode);
+            }
+            0x5E => {
+                self.lsr(operand_address, &instruction.addressing_mode);
+            }
+
+            // DEC instructions
+            0xC6 => {
+                self.dec(operand_address, &instruction.addressing_mode);
+            }
+            0xD6 => {
+                self.dec(operand_address, &instruction.addressing_mode);
+            }
+            0xCE => {
+                self.dec(operand_address, &instruction.addressing_mode);
+            }
+            0xDE => {
+                self.dec(operand_address, &instruction.addressing_mode);
+            }
+
+            // Logic instructions
+            0x29 => {
+                self.and(operand_address, &instruction.addressing_mode);
+            }
+
+            // Flag instructions
+            0x18 => {
+                self.set_flag(StatusFlag::Carry, false);
+            } // CLC
+            0x38 => {
+                self.set_flag(StatusFlag::Carry, true);
+            } // SEC
+            
+            // interrupts
+            0x40 => {
+                self.rti();
+            }
+            0xEA => { /* NOP - do nothing */ }
+
+            _ => {
+                println!("Unknown opcode: {:#X}", instruction.opcode);
+            }
+        }
+
+        self.pc += instruction.bytes as u16 - 1; // adjust PC for instruction length
         true // Continue execution
     }
 
@@ -1115,6 +826,18 @@ impl Cpu {
         };
 
         self.a |= value;
+        self.set_flag(StatusFlag::Zero, self.a == 0);
+        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+    }
+
+    // AND memory with accumulator
+    fn and(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        let value = match addressing_mode {
+            AddressingMode::Immediate => self.read_byte(address),
+            _ => self.read_byte(address),
+        };
+
+        self.a &= value;
         self.set_flag(StatusFlag::Zero, self.a == 0);
         self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
     }
