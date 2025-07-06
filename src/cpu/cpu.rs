@@ -253,6 +253,35 @@ impl Cpu {
         self.p & flag != StatusFlag::empty()
     }
 
+    // Getter methods for CPU registers
+    pub fn get_a(&self) -> u8 {
+        self.a
+    }
+
+    pub fn get_x(&self) -> u8 {
+        self.x
+    }
+
+    pub fn get_y(&self) -> u8 {
+        self.y
+    }
+
+    pub fn get_sp(&self) -> u8 {
+        self.sp
+    }
+
+    pub fn get_status(&self) -> u8 {
+        self.p.bits()
+    }
+
+    pub fn get_cycles(&self) -> u8 {
+        self.cycles
+    }
+
+    pub fn get_pc(&self) -> u16 {
+        self.pc
+    }
+
     // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
     pub fn load_program(&mut self, program: Vec<u8>, address: u16) {
         let start = address as usize;
@@ -947,68 +976,8 @@ impl Cpu {
         }
     }
 
-    pub fn disassemble(&self, start: u16, end: u16) {
-        let mut pc = start;
-        while pc < end {
-            let opcode = self.read_byte(pc);
-            if let Some(instr) = INSTRUCTIONS.get(&opcode) {
-                let mut bytes = vec![opcode];
-                for i in 1..instr.bytes {
-                    bytes.push(self.read_byte(pc + i as u16));
-                }
-
-                let byte_str = bytes
-                    .iter()
-                    .map(|b| format!("{:02X}", b))
-                    .collect::<Vec<_>>()
-                    .join(" ");
-
-                println!(
-                    "${:04X}: {:8} {} {:?}",
-                    pc, byte_str, instr.mnemonic, instr.addressing_mode
-                );
-
-                pc += instr.bytes as u16;
-            } else {
-                println!("${:04X}: {:02X}    ???", pc, opcode);
-                pc += 1;
-            }
-        }
-    }
-
-    pub fn disassemble_to_string(&self, start: u16, end: u16) -> Vec<String> {
-        let mut result = Vec::new();
-        let mut pc = start;
-        while pc < end {
-            let opcode = self.read_byte(pc);
-            if let Some(instr) = INSTRUCTIONS.get(&opcode) {
-                let mut bytes = vec![opcode];
-                for i in 1..instr.bytes {
-                    bytes.push(self.read_byte(pc + i as u16));
-                }
-
-                let byte_str = bytes
-                    .iter()
-                    .map(|b| format!("{:02X}", b))
-                    .collect::<Vec<_>>()
-                    .join(" ");
-
-                result.push(format!(
-                    "${:04X}: {:8} {} {:?}",
-                    pc, byte_str, instr.mnemonic, instr.addressing_mode
-                ));
-
-                pc += instr.bytes as u16;
-            } else {
-                result.push(format!("${:04X}: {:02X}    ???", pc, opcode));
-                pc += 1;
-            }
-        }
-        result
-    }
-
-    pub fn disassemble_current_instruction(&self) -> String {
-        let pc = self.pc;
+    // Core disassembly logic - formats a single instruction at given address
+    fn disassemble_instruction_at(&self, pc: u16) -> (String, u16) {
         let opcode = self.read_byte(pc);
         if let Some(instr) = INSTRUCTIONS.get(&opcode) {
             let mut bytes = vec![opcode];
@@ -1022,13 +991,40 @@ impl Cpu {
                 .collect::<Vec<_>>()
                 .join(" ");
 
-            format!(
+            let formatted = format!(
                 "${:04X}: {:8} {} {:?}",
                 pc, byte_str, instr.mnemonic, instr.addressing_mode
-            )
+            );
+
+            (formatted, instr.bytes as u16)
         } else {
-            format!("${:04X}: {:02X}    ???", pc, opcode)
+            (format!("${:04X}: {:02X}    ???", pc, opcode), 1)
         }
+    }
+
+    pub fn disassemble(&self, start: u16, end: u16) {
+        let mut pc = start;
+        while pc < end {
+            let (formatted, bytes_consumed) = self.disassemble_instruction_at(pc);
+            println!("{}", formatted);
+            pc += bytes_consumed;
+        }
+    }
+
+    pub fn disassemble_to_string(&self, start: u16, end: u16) -> Vec<String> {
+        let mut result = Vec::new();
+        let mut pc = start;
+        while pc < end {
+            let (formatted, bytes_consumed) = self.disassemble_instruction_at(pc);
+            result.push(formatted);
+            pc += bytes_consumed;
+        }
+        result
+    }
+
+    pub fn disassemble_current_instruction(&self) -> String {
+        let (formatted, _) = self.disassemble_instruction_at(self.pc);
+        formatted
     }
 
     // Jump to SubRoutine
@@ -1102,10 +1098,6 @@ impl Cpu {
         self.write_byte(address, value);
         self.set_flag(StatusFlag::Zero, value == 0);
         self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
-    }
-
-    pub fn get_pc(&self) -> u16 {
-        self.pc
     }
 }
 
