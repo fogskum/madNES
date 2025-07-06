@@ -221,6 +221,12 @@ impl Emulator {
         );
         self.render_text_simple(&flags_status, 10, 170)?;
         
+        // Show next instruction to be executed
+        self.debug_canvas.set_draw_color(Color::RGB(255, 255, 255));
+        let next_instruction = self.cpu.disassemble_current_instruction();
+        let instruction_text = format!("NEXT: {}", next_instruction);
+        self.render_text_simple(&instruction_text, 300, 150)?;
+        
         // Add separator
         self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));
         self.debug_canvas.fill_rect(Rect::new(5, 190, 590, 2))?;
@@ -237,11 +243,28 @@ impl Emulator {
             .cloned()
             .collect();
         
+        let current_pc = self.cpu.get_pc();
+        
         for (i, line) in lines_to_render.iter().enumerate() {
             let y = i as i32 * 18 + 220;
             
-            // Highlight current instruction (middle line, around line 10)
-            if i == 10 {
+            // Extract address from the line (format: $XXXX: ...)
+            let should_highlight = if let Some(addr_end) = line.find(':') {
+                if line.starts_with('$') && addr_end > 1 {
+                    if let Ok(line_addr) = u16::from_str_radix(&line[1..addr_end], 16) {
+                        line_addr == current_pc
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+            
+            // Highlight current instruction (the line with current PC)
+            if should_highlight {
                 self.debug_canvas.set_draw_color(Color::RGB(40, 40, 0));
                 self.debug_canvas.fill_rect(Rect::new(5, y - 2, 590, 16))?;
                 self.debug_canvas.set_draw_color(Color::RGB(255, 255, 0));

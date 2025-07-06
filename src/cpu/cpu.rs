@@ -317,14 +317,16 @@ impl Cpu {
         // Execute one instruction and return true if should continue
         let opcode = self.read_byte(self.pc);
 
-        self.pc += 1;
-
         // get instruction metadata for opcode
         if INSTRUCTIONS.get(&opcode).is_none() {
-            return true; // Skip unknown instructions but continue
+            panic!("Unknown opcode: {:#X} at PC: {:#X}", opcode, self.pc);
         }
 
-        let instruction = INSTRUCTIONS.get(&opcode).unwrap();
+        let instruction = INSTRUCTIONS
+            .get(&opcode)
+            .unwrap();
+
+        self.pc += 1;
 
         // get operand address for instruction
         let operand_address = self.get_operand_address(instruction);
@@ -663,7 +665,11 @@ impl Cpu {
             }
         }
 
-        self.pc += instruction.bytes as u16 - 1; // adjust PC for instruction length
+        // PC was already incremented by 1 to skip the opcode
+        // Now increment by (bytes - 1) to skip the operands
+        if instruction.mnemonic != "JSR" && instruction.mnemonic != "JMP" {
+            self.pc += (instruction.bytes - 1) as u16;
+        }
         true // Continue execution
     }
 
