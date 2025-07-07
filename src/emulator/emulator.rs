@@ -61,7 +61,7 @@ impl Emulator {
         // Create texture creator for text rendering
         let texture_creator = debug_canvas.texture_creator();
 
-        debug_canvas.set_draw_color(Color::RGB(0, 0, 0));
+        debug_canvas.set_draw_color(Color::RGB(0, 0, 100));
         debug_canvas.clear();
         debug_canvas.present();
 
@@ -171,7 +171,7 @@ impl Emulator {
         self.main_canvas.present();
 
         // Render debug window with CPU status and disassembly info
-        self.debug_canvas.set_draw_color(Color::RGB(0, 0, 0));
+        self.debug_canvas.set_draw_color(Color::RGB(0, 0, 100));
         self.debug_canvas.clear();
         
         // Render CPU status registers at the top
@@ -226,6 +226,11 @@ impl Emulator {
         let next_instruction = self.cpu.disassemble_current_instruction();
         let instruction_text = format!("NEXT: {}", next_instruction);
         self.render_text_simple(&instruction_text, 300, 150)?;
+        
+        // Show instruction count
+        self.debug_canvas.set_draw_color(Color::RGB(255, 200, 255));
+        let count_text = format!("INSTRUCTIONS: {}", self.cpu.get_instruction_count());
+        self.render_text_simple(&count_text, 300, 170)?;
         
         // Add separator
         self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));

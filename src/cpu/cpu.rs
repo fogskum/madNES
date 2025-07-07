@@ -203,6 +203,7 @@ pub struct Cpu {
     pub p: StatusFlag,
     pub memory: [u8; 0xFFFF],
     pub cycles: u8,
+    pub instruction_count: u64,
 }
 
 impl Memory for Cpu {
@@ -226,6 +227,7 @@ impl Cpu {
             p: StatusFlag::empty(),
             memory: [0; 0xFFFF],
             cycles: 0,
+            instruction_count: 0,
         }
     }
 
@@ -239,6 +241,7 @@ impl Cpu {
         self.sp = 0xFD;
         self.p = StatusFlag::InterruptDisable | StatusFlag::Unused;
         self.cycles = 0;
+        self.instruction_count = 0;
     }
 
     pub fn set_flag(&mut self, flag: StatusFlag, value: bool) {
@@ -282,6 +285,10 @@ impl Cpu {
         self.pc
     }
 
+    pub fn get_instruction_count(&self) -> u64 {
+        self.instruction_count
+    }
+
     // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
     pub fn load_program(&mut self, program: Vec<u8>, address: u16) {
         let start = address as usize;
@@ -306,7 +313,7 @@ impl Cpu {
                 let upper_address = self.pc + 4;
                 self.disassemble(self.pc, upper_address);
             }
-            
+
             if !self.step() {
                 break;
             }
@@ -322,9 +329,7 @@ impl Cpu {
             panic!("Unknown opcode: {:#X} at PC: {:#X}", opcode, self.pc);
         }
 
-        let instruction = INSTRUCTIONS
-            .get(&opcode)
-            .unwrap();
+        let instruction = INSTRUCTIONS.get(&opcode).unwrap();
 
         self.pc += 1;
 
@@ -337,102 +342,27 @@ impl Cpu {
                 return false; // Stop execution on BRK
             }
             // LDA instructions
-            0xA9 => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xA5 => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xB5 => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xAD => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xBD => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xB9 => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xA1 => {
-                self.lda(operand_address, &instruction.addressing_mode);
-            }
-            0xB1 => {
+            0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
                 self.lda(operand_address, &instruction.addressing_mode);
             }
 
             // ORA instructions
-            0x09 => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x05 => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x15 => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x0D => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x1D => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x19 => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x01 => {
-                self.ora(operand_address, &instruction.addressing_mode);
-            }
-            0x11 => {
+            0x09 | 0x05 | 0x15 | 0x0D | 0x1D | 0x19 | 0x01 | 0x11 => {
                 self.ora(operand_address, &instruction.addressing_mode);
             }
 
             // CMP instructions
-            0xC9 => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xC5 => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xD5 => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xCD => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xDD => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xD9 => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xC1 => {
-                self.cmp(operand_address, &instruction.addressing_mode);
-            }
-            0xD1 => {
+            0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
                 self.cmp(operand_address, &instruction.addressing_mode);
             }
 
             // CPX instructions
-            0xE0 => {
-                self.cpx(operand_address, &instruction.addressing_mode);
-            }
-            0xE4 => {
-                self.cpx(operand_address, &instruction.addressing_mode);
-            }
-            0xEC => {
+            0xE0 | 0xE4 | 0xEC => {
                 self.cpx(operand_address, &instruction.addressing_mode);
             }
 
             // CPY instructions
-            0xC0 => {
-                self.cpy(operand_address, &instruction.addressing_mode);
-            }
-            0xC4 => {
-                self.cpy(operand_address, &instruction.addressing_mode);
-            }
-            0xCC => {
+            0xC0 | 0xC4 | 0xCC => {
                 self.cpy(operand_address, &instruction.addressing_mode);
             }
 
@@ -463,59 +393,17 @@ impl Cpu {
             }
 
             // STA instructions
-            0x85 => {
-                self.sta(operand_address);
-            }
-            0x95 => {
-                self.sta(operand_address);
-            }
-            0x8D => {
-                self.sta(operand_address);
-            }
-            0x9D => {
-                self.sta(operand_address);
-            }
-            0x99 => {
-                self.sta(operand_address);
-            }
-            0x81 => {
-                self.sta(operand_address);
-            }
-            0x91 => {
+            0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
                 self.sta(operand_address);
             }
 
             // LDX instructions
-            0xA2 => {
-                self.ldx(operand_address, &instruction.addressing_mode);
-            }
-            0xA6 => {
-                self.ldx(operand_address, &instruction.addressing_mode);
-            }
-            0xB6 => {
-                self.ldx(operand_address, &instruction.addressing_mode);
-            }
-            0xAE => {
-                self.ldx(operand_address, &instruction.addressing_mode);
-            }
-            0xBE => {
+            0xA2 | 0xA6 | 0xAE | 0xB6 | 0xBE => {
                 self.ldx(operand_address, &instruction.addressing_mode);
             }
 
             // LDY instructions
-            0xA0 => {
-                self.ldy(operand_address, &instruction.addressing_mode);
-            }
-            0xA4 => {
-                self.ldy(operand_address, &instruction.addressing_mode);
-            }
-            0xB4 => {
-                self.ldy(operand_address, &instruction.addressing_mode);
-            }
-            0xAC => {
-                self.ldy(operand_address, &instruction.addressing_mode);
-            }
-            0xBC => {
+            0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
                 self.ldy(operand_address, &instruction.addressing_mode);
             }
 
@@ -532,112 +420,46 @@ impl Cpu {
 
             // Branch instructions
             0x10 => {
-                self.bpl(operand_address);
+                self.bpl();
             }
             0x30 => {
-                self.bim(operand_address);
+                self.bmi();
             }
             0x90 => {
-                self.bcc(operand_address);
+                self.bcc();
             }
             0xB0 => {
-                self.bcs(operand_address);
+                self.bcs();
             }
             0xD0 => {
-                self.bne(operand_address);
+                self.bne();
             }
             0xF0 => {
-                self.beq(operand_address);
+                self.beq();
             }
 
             // BIT instructions
-            0x24 => {
-                self.bit(operand_address, &instruction.addressing_mode);
-            }
-            0x2C => {
+            0x24 | 0x2C => {
                 self.bit(operand_address, &instruction.addressing_mode);
             }
 
             // ADC instructions
-            0x69 => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x65 => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x75 => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x6D => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x7D => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x79 => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x61 => {
-                self.adc(operand_address, &instruction.addressing_mode);
-            }
-            0x71 => {
+            0x69 | 0x65 | 0x75 | 0x6D | 0x7D | 0x79 | 0x61 | 0x71 => {
                 self.adc(operand_address, &instruction.addressing_mode);
             }
 
             // SBC instructions
-            0xE9 => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xE5 => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xF5 => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xED => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xFD => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xF9 => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xE1 => {
-                self.sbc(operand_address, &instruction.addressing_mode);
-            }
-            0xF1 => {
+            0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
                 self.sbc(operand_address, &instruction.addressing_mode);
             }
 
             // LSR instructions
-            0x4A => {
-                self.lsr(operand_address, &instruction.addressing_mode);
-            }
-            0x46 => {
-                self.lsr(operand_address, &instruction.addressing_mode);
-            }
-            0x56 => {
-                self.lsr(operand_address, &instruction.addressing_mode);
-            }
-            0x4E => {
-                self.lsr(operand_address, &instruction.addressing_mode);
-            }
-            0x5E => {
+            0x4A | 0x46 | 0x56 | 0x4E | 0x5E => {
                 self.lsr(operand_address, &instruction.addressing_mode);
             }
 
             // DEC instructions
-            0xC6 => {
-                self.dec(operand_address, &instruction.addressing_mode);
-            }
-            0xD6 => {
-                self.dec(operand_address, &instruction.addressing_mode);
-            }
-            0xCE => {
-                self.dec(operand_address, &instruction.addressing_mode);
-            }
-            0xDE => {
+            0xC6 | 0xD6 | 0xCE | 0xDE => {
                 self.dec(operand_address, &instruction.addressing_mode);
             }
 
@@ -653,24 +475,31 @@ impl Cpu {
             0x38 => {
                 self.set_flag(StatusFlag::Carry, true);
             } // SEC
-            
+
             // interrupts
             0x40 => {
                 self.rti();
             }
-            0xEA => { /* NOP - do nothing */ }
-
+            0xEA => {
+                self.nop();
+            }
             _ => {
                 println!("Unknown opcode: {:#X}", instruction.opcode);
             }
         }
 
-        // PC was already incremented by 1 to skip the opcode
-        // Now increment by (bytes - 1) to skip the operands
-        if instruction.mnemonic != "JSR" && instruction.mnemonic != "JMP" {
+        if instruction.mnemonic != "JSR"
+            && instruction.mnemonic != "JMP"
+            && instruction.mnemonic != "RTS"
+        {
+            // PC was already incremented by 1 to skip the opcode
+            // Now increment by (bytes - 1) to skip the operands
             self.pc += (instruction.bytes - 1) as u16;
         }
-        true // Continue execution
+
+        self.instruction_count += 1;
+
+        true
     }
 
     fn get_operand_address(&self, instruction: &Instruction) -> u16 {
@@ -714,17 +543,13 @@ impl Cpu {
     }
 
     // branch on carry set
-    fn bcs(&mut self, address: u16) {
-        if self.get_flag(StatusFlag::Carry) {
-            self.pc = address;
-        }
+    fn bcs(&mut self) {
+        self.branch(self.get_flag(StatusFlag::Carry));
     }
 
     // branch on carry clear
-    fn bcc(&mut self, address: u16) {
-        if !self.get_flag(StatusFlag::Carry) {
-            self.pc = address;
-        }
+    fn bcc(&mut self) {
+        self.branch(!self.get_flag(StatusFlag::Carry));
     }
 
     // branch on equal
@@ -824,8 +649,9 @@ impl Cpu {
     fn rti(&mut self) {
         // Pull status from stack (with B flag ignored)
         let status = self.pull_stack();
-        self.p = StatusFlag::from_bits_truncate(status & 0b1110_1111 | 0b0010_0000); // Set unused flag
-                                                                                     // Pull PC from stack (low then high)
+         // Set unused flag
+        self.p = StatusFlag::from_bits_truncate(status & 0b1110_1111 | 0b0010_0000);
+        // Pull PC from stack (low then high)
         let pcl = self.pull_stack();
         let pch = self.pull_stack();
         self.pc = (pch as u16) << 8 | (pcl as u16);
@@ -969,16 +795,19 @@ impl Cpu {
     }
 
     // branch on equal (zero flag set)
-    fn beq(&mut self, address: u16) {
-        if self.get_flag(StatusFlag::Zero) {
-            self.pc = address;
-        }
+    fn beq(&mut self) {
+        self.branch(self.get_flag(StatusFlag::Zero));
     }
 
-    // branch on not equal (zero flag clear)
-    fn bne(&mut self, address: u16) {
-        if !self.get_flag(StatusFlag::Zero) {
-            self.pc = address;
+    // branch on zero flag = 0
+    fn bne(&mut self) {
+        self.branch(!self.get_flag(StatusFlag::Zero));
+    }
+
+    fn branch(&mut self, condition: bool) {
+        if condition {
+            let offset = self.read_byte(self.pc) as i8;
+            self.pc = self.pc.wrapping_add(offset as u16);
         }
     }
 
@@ -1049,17 +878,13 @@ impl Cpu {
     }
 
     // branch on minus (negative flag set)
-    fn bim(&mut self, address: u16) {
-        if self.get_flag(StatusFlag::Negative) {
-            self.pc = address;
-        }
+    fn bmi(&mut self) {
+        self.branch(self.get_flag(StatusFlag::Negative));
     }
 
     // branch on plus (negative flag clear)
-    fn bpl(&mut self, address: u16) {
-        if !self.get_flag(StatusFlag::Negative) {
-            self.pc = address;
-        }
+    fn bpl(&mut self) {
+        self.branch(!self.get_flag(StatusFlag::Negative));
     }
 
     // test bits in memory with accumulator
