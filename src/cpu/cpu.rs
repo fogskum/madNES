@@ -1,5 +1,4 @@
-use crate::cpu::memory::AddressingMode;
-use crate::cpu::memory::Memory;
+use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
 use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
 
@@ -31,18 +30,18 @@ pub struct Cpu {
 
     // Status register
     pub p: StatusFlag,
-    pub memory: [u8; 0x10000],
+    pub memory: NesMemory,
     pub cycles: u64,
     pub instruction_count: u64,
 }
 
 impl Memory for Cpu {
     fn read_byte(&self, address: u16) -> u8 {
-        self.memory[address as usize]
+        self.memory.read_byte(address)
     }
 
     fn write_byte(&mut self, address: u16, value: u8) {
-        self.memory[address as usize] = value;
+        self.memory.write_byte(address, value)
     }
 }
 
@@ -55,7 +54,7 @@ impl Default for Cpu {
             pc: 0,
             sp: 0xFD,
             p: StatusFlag::empty(),
-            memory: [0; 0x10000],
+            memory: NesMemory::new(),
             cycles: 0,
             instruction_count: 0,
         }
@@ -179,19 +178,23 @@ impl Cpu {
 
     // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
     pub fn load_program(&mut self, program: Vec<u8>, address: u16) -> Result<(), String> {
-        let start = address as usize;
-        let end = start + program.len();
-        if end > self.memory.len() {
+        // For NES, programs are typically loaded to PRG ROM area (0x8000+)
+        if address < PROGRAM_ADDRESS {
             return Err(format!(
-                "Program does not fit in memory: end address {:#X} exceeds memory size {:#X}",
-                end,
-                self.memory.len()
+                "Programs should be loaded to PRG ROM area (0x8000+), got address {:#X}",
+                address
             ));
         }
-        self.memory[start..end].copy_from_slice(&program);
+        
+        // Load program into PRG ROM
+        self.memory.load_prg_rom(program.clone());
+        
+        // Set reset vector to point to the program start
         self.write_word(0xFFFC, address);
         self.reset();
-        self.disassemble(start as u16, end as u16);
+        
+        // Disassemble for debugging
+        self.disassemble(address, address + program.len() as u16);
         Ok(())
     }
 
@@ -1255,5 +1258,74 @@ mod tests {
         assert_eq!(cpu.a, 0b11100000); // 0b01001010 ^ 0b10101010 = 0b11100000
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(cpu.get_flag(StatusFlag::Negative)); // Bit 7 is 1
+    }
+
+    #[test]
+    fn test_nes_memory_mirroring() {
+        let mut cpu = Cpu::new();
+        
+        // Test internal RAM mirroring (0x0000-0x07FF mirrored to 0x0800-0x1FFF)
+        cpu.write_byte(0x0200, 0xAB); // Write to base RAM
+        assert_eq!(cpu.read_byte(0x0200), 0xAB); // Read from base
+        assert_eq!(cpu.read_byte(0x0A00), 0xAB); // Read from mirror 1 (0x0200 + 0x0800)
+        assert_eq!(cpu.read_byte(0x1200), 0xAB); // Read from mirror 2 (0x0200 + 0x1000)
+        assert_eq!(cpu.read_byte(0x1A00), 0xAB); // Read from mirror 3 (0x0200 + 0x1800)
+        
+        // Test writing to mirror affects base
+        cpu.write_byte(0x1300, 0xCD); // Write to mirror
+        assert_eq!(cpu.read_byte(0x0300), 0xCD); // Should appear in base (0x1300 & 0x07FF = 0x0300)
+    }
+
+    #[test]
+    fn test_nes_memory_ppu_mirroring() {
+        let mut cpu = Cpu::new();
+        
+        // Test PPU register mirroring (0x2000-0x2007 mirrored throughout 0x2000-0x3FFF)
+        cpu.write_byte(0x2002, 0x55); // Write to PPU status register
+        assert_eq!(cpu.read_byte(0x2002), 0x55); // Read from base
+        assert_eq!(cpu.read_byte(0x200A), 0x55); // Read from mirror (0x200A & 0x0007 = 0x0002)
+        assert_eq!(cpu.read_byte(0x3002), 0x55); // Read from high mirror
+        
+        // Test writing to mirror affects base
+        cpu.write_byte(0x2409, 0x77); // Write to mirror (0x2409 & 0x0007 = 0x0001)
+        assert_eq!(cpu.read_byte(0x2001), 0x77); // Should appear in base register
+    }
+
+    #[test]
+    fn test_nes_memory_regions() {
+        let mut cpu = Cpu::new();
+        
+        // Test PRG RAM area (0x6000-0x7FFF)
+        cpu.write_byte(0x6000, 0x11);
+        cpu.write_byte(0x7FFF, 0x22);
+        assert_eq!(cpu.read_byte(0x6000), 0x11);
+        assert_eq!(cpu.read_byte(0x7FFF), 0x22);
+        
+        // Test APU/IO area (0x4000-0x401F)
+        cpu.write_byte(0x4000, 0x33);
+        cpu.write_byte(0x4015, 0x44);
+        assert_eq!(cpu.read_byte(0x4000), 0x33);
+        assert_eq!(cpu.read_byte(0x4015), 0x44);
+    }
+
+    #[test]
+    fn test_nes_memory_prg_rom() {
+        let mut cpu = Cpu::new();
+        
+        // Load a small ROM
+        let rom_data = vec![0x01, 0x02, 0x03, 0x04];
+        cpu.memory.load_prg_rom(rom_data);
+        
+        // Test reading from PRG ROM
+        assert_eq!(cpu.read_byte(0x8000), 0x01);
+        assert_eq!(cpu.read_byte(0x8001), 0x02);
+        assert_eq!(cpu.read_byte(0x8002), 0x03);
+        assert_eq!(cpu.read_byte(0x8003), 0x04);
+        
+        // Test 16KB ROM mirroring (if ROM is exactly 16KB, it mirrors in upper 16KB)
+        let rom_16kb = vec![0xAA; 0x4000]; // 16KB ROM
+        cpu.memory.load_prg_rom(rom_16kb);
+        assert_eq!(cpu.read_byte(0x8000), 0xAA); // First 16KB
+        assert_eq!(cpu.read_byte(0xC000), 0xAA); // Mirrored in second 16KB
     }
 }
