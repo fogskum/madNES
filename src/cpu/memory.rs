@@ -1,3 +1,5 @@
+use crate::rom::rom::Rom;
+
 pub trait Memory {
     fn read_byte(&self, address: u16) -> u8;
 
@@ -33,8 +35,8 @@ pub struct NesMemory {
     // APU and I/O registers
     apu_io_registers: [u8; 0x20], // $4000-$401F
     
-    // Cartridge space - simplified for now
-    prg_rom: Vec<u8>, // PRG ROM data
+    // Cartridge space
+    rom: Option<Rom>, // PRG ROM data
     prg_ram: [u8; 0x2000], // PRG RAM (8KB) at $6000-$7FFF
 }
 
@@ -44,13 +46,13 @@ impl NesMemory {
             internal_ram: [0; 0x800],
             ppu_registers: [0; 8],
             apu_io_registers: [0; 0x20],
-            prg_rom: Vec::new(),
+            rom: None, // No ROM loaded initially
             prg_ram: [0; 0x2000],
         }
     }
     
     pub fn load_prg_rom(&mut self, data: Vec<u8>) {
-        self.prg_rom = data;
+        self.rom = Some(Rom::new(&data).unwrap());
     }
     
     /// Get the mirrored address for internal RAM
@@ -104,16 +106,22 @@ impl Memory for NesMemory {
             // PRG ROM
             0x8000..=0xFFFF => {
                 let offset = (address - 0x8000) as usize;
-                if offset < self.prg_rom.len() {
-                    self.prg_rom[offset]
-                } else {
-                    // Handle case where ROM is smaller than address space
-                    // Mirror the ROM if it's 16KB (typical for small games)
-                    if self.prg_rom.len() == 0x4000 && offset >= 0x4000 {
-                        self.prg_rom[offset - 0x4000]
+                if let Some(rom) = &self.rom {
+                    if offset < rom.prg_rom.len() {
+                        rom.prg_rom[offset]
                     } else {
-                        0
+                        // Handle case where ROM is smaller than address space
+                        // Mirror the ROM if it's 16KB (typical for small games)
+                        if rom.prg_rom.len() == 0x4000 && offset >= 0x4000 {
+                            rom.prg_rom[offset - 0x4000]
+                        } else {
+                            0
+                        }
                     }
+                }
+                else {
+                    // If no ROM is loaded, return 0 (for testing)
+                    0
                 }
             }
             
@@ -160,20 +168,8 @@ impl Memory for NesMemory {
             
             // PRG ROM
             0x8000..=0xFFFF => {
-                let offset = (address - 0x8000) as usize;
-                if offset < self.prg_rom.len() {
-                    self.prg_rom[offset] = value;
-                } else {
-                    // If no ROM is loaded, allow writes (for testing)
-                    // In a real NES, this would be handled by the cartridge
-                    if self.prg_rom.is_empty() {
-                        // Initialize ROM area if needed for testing
-                        self.prg_rom.resize(0x8000, 0);
-                    }
-                    if offset < self.prg_rom.len() {
-                        self.prg_rom[offset] = value;
-                    }
-                }
+                // ROM is read-only, ignore writes
+                // In a real NES, mapper registers might be here
             }
             
             // Unmapped addresses - ignore writes
