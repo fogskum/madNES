@@ -1,4 +1,5 @@
 use crate::cpu::cpu::Cpu;
+
 use crate::emulator::options::EmulatorOptions;
 
 use sdl2::event::Event;
@@ -213,14 +214,14 @@ impl Emulator {
         self.render_text_simple(&flags_header, 10, 150)?;
         
         let flags_status = format!("       {} {} {} {} {} {} {} {}", 
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Negative) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Overflow) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Unused) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Break) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Decimal) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::InterruptDisable) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Zero) { "1" } else { "0" },
-            if self.cpu.get_flag(crate::cpu::cpu::StatusFlag::Carry) { "1" } else { "0" }
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Negative) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Overflow) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Unused) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Break) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Decimal) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::InterruptDisable) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Zero) { "1" } else { "0" },
+            if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Carry) { "1" } else { "0" }
         );
         self.render_text_simple(&flags_status, 10, 170)?;
         
