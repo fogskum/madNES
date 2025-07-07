@@ -9,7 +9,7 @@ use sdl2::rect::Rect;
 use sdl2::render::{Canvas, TextureCreator};
 use sdl2::video::{Window, WindowContext};
 use sdl2::{EventPump};
-use sdl2::ttf::Sdl2TtfContext;
+use sdl2::ttf::{Sdl2TtfContext};
 use std::time::{Duration, Instant};
 
 pub struct Emulator {
@@ -21,6 +21,9 @@ pub struct Emulator {
     disassembly_lines: Vec<String>,
     texture_creator: TextureCreator<WindowContext>,
     ttf_context: Sdl2TtfContext,
+    // Store the font path for lazy loading
+    font_path: String,
+    font_size: u16,
 }
 
 impl Emulator {
@@ -79,6 +82,8 @@ impl Emulator {
             disassembly_lines: Vec::new(),
             texture_creator,
             ttf_context,
+            font_path: "assets/font.ttf".to_string(),
+            font_size: 12,
         })
     }
 
@@ -198,41 +203,26 @@ impl Emulator {
         // Render debug window with CPU status and disassembly info
         self.debug_canvas.set_draw_color(Color::RGB(0, 0, 100));
         self.debug_canvas.clear();
+
+        // OPTIMIZATION: Batch all text rendering to load font only once
+        let mut text_batch = Vec::new();
         
-        // Render CPU status registers at the top
-        self.debug_canvas.set_draw_color(Color::RGB(255, 255, 255));
-        let cpu_status = format!("CPU REGISTERS");
-        self.render_text_simple(&cpu_status, 10, 10)?;
+        // Prepare all text items for batch rendering
+        text_batch.push((format!("CPU REGISTERS"), 10, 10, Color::RGB(255, 255, 255)));
         
-        // Show execution mode
-        self.debug_canvas.set_draw_color(Color::RGB(255, 200, 100));
         let mode_text = if auto_mode { "MODE: AUTO (SPACE=manual, N=step)" } else { "MODE: MANUAL (SPACE=auto, N=step)" };
-        self.render_text_simple(&mode_text, 200, 10)?;
+        text_batch.push((mode_text.to_string(), 200, 10, Color::RGB(255, 200, 100)));
         
-        self.debug_canvas.set_draw_color(Color::RGB(0, 255, 255));
-        let pc_status = format!("PC: ${:04X}", self.cpu.get_pc());
-        self.render_text_simple(&pc_status, 10, 30)?;
-        
-        let a_status = format!("A:  ${:02X}  ({:3})", self.cpu.get_a(), self.cpu.get_a());
-        self.render_text_simple(&a_status, 10, 50)?;
-        
-        let x_status = format!("X:  ${:02X}  ({:3})", self.cpu.get_x(), self.cpu.get_x());
-        self.render_text_simple(&x_status, 10, 70)?;
-        
-        let y_status = format!("Y:  ${:02X}  ({:3})", self.cpu.get_y(), self.cpu.get_y());
-        self.render_text_simple(&y_status, 10, 90)?;
-        
-        let sp_status = format!("SP: ${:02X}  ({:3})", self.cpu.get_sp(), self.cpu.get_sp());
-        self.render_text_simple(&sp_status, 10, 110)?;
+        text_batch.push((format!("PC: ${:04X}", self.cpu.get_pc()), 10, 30, Color::RGB(0, 255, 255)));
+        text_batch.push((format!("A:  ${:02X}  ({:3})", self.cpu.get_a(), self.cpu.get_a()), 10, 50, Color::RGB(0, 255, 255)));
+        text_batch.push((format!("X:  ${:02X}  ({:3})", self.cpu.get_x(), self.cpu.get_x()), 10, 70, Color::RGB(0, 255, 255)));
+        text_batch.push((format!("Y:  ${:02X}  ({:3})", self.cpu.get_y(), self.cpu.get_y()), 10, 90, Color::RGB(0, 255, 255)));
+        text_batch.push((format!("SP: ${:02X}  ({:3})", self.cpu.get_sp(), self.cpu.get_sp()), 10, 110, Color::RGB(0, 255, 255)));
         
         // Status flags
         let status_byte = self.cpu.get_status();
-        let status_status = format!("P:  ${:02X}  ({:08b})", status_byte, status_byte);
-        self.render_text_simple(&status_status, 10, 130)?;
-        
-        self.debug_canvas.set_draw_color(Color::RGB(200, 200, 200));
-        let flags_header = format!("FLAGS: N V - B D I Z C");
-        self.render_text_simple(&flags_header, 10, 150)?;
+        text_batch.push((format!("P:  ${:02X}  ({:08b})", status_byte, status_byte), 10, 130, Color::RGB(0, 255, 255)));
+        text_batch.push((format!("FLAGS: N V - B D I Z C"), 10, 150, Color::RGB(200, 200, 200)));
         
         let flags_status = format!("       {} {} {} {} {} {} {} {}", 
             if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Negative) { "1" } else { "0" },
@@ -244,34 +234,20 @@ impl Emulator {
             if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Zero) { "1" } else { "0" },
             if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Carry) { "1" } else { "0" }
         );
-        self.render_text_simple(&flags_status, 10, 170)?;
+        text_batch.push((flags_status, 10, 170, Color::RGB(200, 200, 200)));
         
         // Show next instruction to be executed
-        self.debug_canvas.set_draw_color(Color::RGB(255, 255, 255));
         let next_instruction = self.cpu.disassemble_current_instruction();
-        let instruction_text = format!("NEXT: {}", next_instruction);
-        self.render_text_simple(&instruction_text, 300, 150)?;
+        text_batch.push((format!("NEXT: {}", next_instruction), 300, 150, Color::RGB(255, 255, 255)));
         
-        // Show instruction count
-        self.debug_canvas.set_draw_color(Color::RGB(255, 200, 255));
-        let count_text = format!("INSTRUCTIONS: {}", self.cpu.get_instruction_count());
-        self.render_text_simple(&count_text, 300, 170)?;
-
-        // Show cycles count
-        self.debug_canvas.set_draw_color(Color::RGB(255, 200, 255));
-        let cycles_text = format!("CYCLES: {}", self.cpu.get_cycles());
-        self.render_text_simple(&cycles_text, 450, 170)?;
+        // Show instruction count and cycles
+        text_batch.push((format!("INSTRUCTIONS: {}", self.cpu.get_instruction_count()), 300, 170, Color::RGB(255, 200, 255)));
+        text_batch.push((format!("CYCLES: {}", self.cpu.get_cycles()), 450, 170, Color::RGB(255, 200, 255)));
         
-        // Add separator
-        self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));
-        self.debug_canvas.fill_rect(Rect::new(5, 190, 590, 2))?;
+        // Disassembly title
+        text_batch.push((format!("DISASSEMBLY"), 10, 200, Color::RGB(255, 255, 255)));
         
-        // Render disassembly title
-        self.debug_canvas.set_draw_color(Color::RGB(255, 255, 255));
-        let disasm_title = format!("DISASSEMBLY");
-        self.render_text_simple(&disasm_title, 10, 200)?;
-        
-        // Render actual disassembly text using simple bitmap-style rendering
+        // Prepare disassembly lines
         let lines_to_render: Vec<String> = self.disassembly_lines
             .iter()
             .take(30)
@@ -280,6 +256,7 @@ impl Emulator {
         
         let current_pc = self.cpu.get_pc();
         
+        // Add disassembly lines to batch
         for (i, line) in lines_to_render.iter().enumerate() {
             let y = i as i32 * 18 + 220;
             
@@ -302,41 +279,52 @@ impl Emulator {
             if should_highlight {
                 self.debug_canvas.set_draw_color(Color::RGB(40, 40, 0));
                 self.debug_canvas.fill_rect(Rect::new(5, y - 2, 590, 16))?;
-                self.debug_canvas.set_draw_color(Color::RGB(255, 255, 0));
+                text_batch.push((line.clone(), 10, y, Color::RGB(255, 255, 0)));
             } else {
-                self.debug_canvas.set_draw_color(Color::RGB(0, 255, 0));
+                text_batch.push((line.clone(), 10, y, Color::RGB(0, 255, 0)));
             }
-            
-            // Render text as simple rectangles representing characters
-            self.render_text_simple(&line, 10, y)?;
         }
+        
+        // Add separator
+        self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));
+        self.debug_canvas.fill_rect(Rect::new(5, 190, 590, 2))?;
+        
+        // OPTIMIZATION: Render all text in a single batch (loads font only once!)
+        self.render_text_batch(&text_batch)?;
         
         self.debug_canvas.present();
         Ok(())
     }
 
-    fn render_text_simple(&mut self, text: &str, start_x: i32, y: i32) -> Result<(), String> {
-        // Use the pre-initialized TTF context and load font once per call (still cached by OS)
-        let font = self.ttf_context.load_font("assets/font.ttf", 12).map_err(|e| e.to_string())?;
+    // Optimized batch text rendering - renders multiple lines with a single font load
+    fn render_text_batch(&mut self, text_items: &[(String, i32, i32, Color)]) -> Result<(), String> {
+        if text_items.is_empty() {
+            return Ok(());
+        }
+
+        // Load font once for the entire batch
+        let font = self.ttf_context.load_font(&self.font_path, self.font_size).map_err(|e| e.to_string())?;
         
-        // Create a surface from the text
-        let surface = font
-            .render(text)
-            .blended(Color::RGB(255, 255, 255))
-            .map_err(|e| e.to_string())?;
-        
-        // Create a texture from the surface
-        let texture = self.texture_creator
-            .create_texture_from_surface(&surface)
-            .map_err(|e| e.to_string())?;
-        
-        // Get the text dimensions
-        let text_width = surface.width();
-        let text_height = surface.height();
-        
-        // Render the texture to the canvas
-        let dst_rect = Rect::new(start_x, y, text_width, text_height);
-        self.debug_canvas.copy(&texture, None, dst_rect)?;
+        for (text, x, y, color) in text_items {
+            // Create a surface from the text
+            let surface = font
+                .render(text)
+                .blended(*color)
+                .map_err(|e| e.to_string())?;
+            
+            // Create a texture from the surface
+            let texture = self.texture_creator
+                .create_texture_from_surface(&surface)
+                .map_err(|e| e.to_string())?;
+            
+            // Get the text dimensions
+            let text_width = surface.width();
+            let text_height = surface.height();
+            
+            // Render the texture to the canvas
+            let dst_rect = Rect::new(*x, *y, text_width, text_height);
+            self.debug_canvas.copy(&texture, None, dst_rect)?;
+        }
         
         Ok(())
     }
