@@ -260,6 +260,12 @@ impl Cpu {
             0x30 => {
                 self.bmi();
             }
+            0x50 => {
+                self.bvc();
+            }
+            0x70 => {
+                self.bvs();
+            }
             0x90 => {
                 self.bcc();
             }
@@ -624,6 +630,16 @@ impl Cpu {
         self.branch(!self.get_flag(StatusFlag::Zero));
     }
 
+    // branch on overflow clear
+    fn bvc(&mut self) {
+        self.branch(!self.get_flag(StatusFlag::Overflow));
+    }
+
+    // branch on overflow set
+    fn bvs(&mut self) {
+        self.branch(self.get_flag(StatusFlag::Overflow));
+    }
+
     fn branch(&mut self, condition: bool) {
         if condition {
             let offset = self.read_byte(self.pc) as i8;
@@ -855,5 +871,53 @@ mod tests {
         cpu.pc = 0x8000;
         cpu.run(true);
         assert_eq!(cpu.a, 0x77);
+    }
+
+    #[test]
+    fn test_bvc_branch_taken() {
+        let mut cpu = Cpu::new();
+        // BVC $02 - should branch 2 bytes forward if overflow is clear
+        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute BVC
+        // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
+        assert_eq!(cpu.pc, 0x8004);
+    }
+
+    #[test]
+    fn test_bvc_branch_not_taken() {
+        let mut cpu = Cpu::new();
+        // BVC $02 - should not branch if overflow is set
+        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag AFTER load_program
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute BVC
+        // PC should be at 0x8000 + 2 (instruction length) = 0x8002
+        assert_eq!(cpu.pc, 0x8002);
+    }
+
+    #[test]
+    fn test_bvs_branch_taken() {
+        let mut cpu = Cpu::new();
+        // BVS $02 - should branch 2 bytes forward if overflow is set
+        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute BVS
+        // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
+        assert_eq!(cpu.pc, 0x8004);
+    }
+
+    #[test]
+    fn test_bvs_branch_not_taken() {
+        let mut cpu = Cpu::new();
+        // BVS $02 - should not branch if overflow is clear
+        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (redundant but explicit)
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute BVS
+        // PC should be at 0x8000 + 2 (instruction length) = 0x8002
+        assert_eq!(cpu.pc, 0x8002);
     }
 }

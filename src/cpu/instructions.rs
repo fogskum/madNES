@@ -163,7 +163,8 @@ lazy_static! {
         map.insert(0x30, Instruction::new("BMI", 0x30, AddressingMode::Implied, 2, 2));
         map.insert(0xD0, Instruction::new("BNE", 0xD0, AddressingMode::Implied, 2, 2));
         map.insert(0x10, Instruction::new("BPL", 0x10, AddressingMode::Implied, 2, 2));
-        // todo: missing BVC,BVS
+        map.insert(0x50, Instruction::new("BVC", 0x50, AddressingMode::Implied, 2, 2));
+        map.insert(0x70, Instruction::new("BVS", 0x70, AddressingMode::Implied, 2, 2));
 
         // jump
         map.insert(0x4C, Instruction::new("JMP", 0x4C, AddressingMode::Absolute, 3, 3));
