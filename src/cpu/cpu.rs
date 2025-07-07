@@ -31,7 +31,7 @@ pub struct Cpu {
 
     // Status register
     pub p: StatusFlag,
-    pub memory: [u8; 0xFFFF],
+    pub memory: [u8; 0x10000],
     pub cycles: u8,
     pub instruction_count: u64,
 }
@@ -55,10 +55,57 @@ impl Cpu {
             pc: 0,
             sp: 0xFD,
             p: StatusFlag::empty(),
-            memory: [0; 0xFFFF],
+            memory: [0; 0x10000],
             cycles: 0,
             instruction_count: 0,
         }
+    }
+
+    pub fn irq(&mut self) {
+        // IRQ can be masked by the interrupt disable flag
+        if self.get_flag(StatusFlag::InterruptDisable) {
+            return;
+        }
+        
+        // Push PC high byte first, then low byte
+        let pc_high = (self.pc >> 8) as u8;
+        let pc_low = (self.pc & 0xFF) as u8;
+        self.push_stack(pc_high);
+        self.push_stack(pc_low);
+        
+        // Push status register with break flag clear (hardware interrupt)
+        let mut status = self.p.bits();
+        status &= !StatusFlag::Break.bits(); // Clear break flag
+        status |= StatusFlag::Unused.bits();  // Set unused flag
+        self.push_stack(status);
+
+        // Set the interrupt disable flag
+        self.set_flag(StatusFlag::InterruptDisable, true);
+        
+        // Set PC to the address stored at 0xFFFE (IRQ vector)
+        self.pc = self.read_word(0xFFFE);
+    }
+
+    pub fn nmi(&mut self) {
+        // NMI cannot be masked
+        
+        // Push PC high byte first, then low byte
+        let pc_high = (self.pc >> 8) as u8;
+        let pc_low = (self.pc & 0xFF) as u8;
+        self.push_stack(pc_high);
+        self.push_stack(pc_low);
+        
+        // Push status register with break flag clear (hardware interrupt)
+        let mut status = self.p.bits();
+        status &= !StatusFlag::Break.bits(); // Clear break flag
+        status |= StatusFlag::Unused.bits();  // Set unused flag
+        self.push_stack(status);
+
+        // Set the interrupt disable flag
+        self.set_flag(StatusFlag::InterruptDisable, true);
+        
+        // Set PC to the address stored at 0xFFFA (NMI vector)
+        self.pc = self.read_word(0xFFFA);
     }
 
     pub fn reset(&mut self) {
@@ -380,6 +427,28 @@ impl Cpu {
     }
 
     fn brk(&mut self, _address: u16, _addressing_mode: &AddressingMode) -> u8 {
+        // BRK is a software interrupt
+        // Increment PC by 1 to point to the next instruction after BRK
+        self.pc += 1;
+        
+        // Push PC high byte first, then low byte
+        let pc_high = (self.pc >> 8) as u8;
+        let pc_low = (self.pc & 0xFF) as u8;
+        self.push_stack(pc_high);
+        self.push_stack(pc_low);
+        
+        // Push status register with break flag set (software interrupt)
+        let mut status = self.p.bits();
+        status |= StatusFlag::Break.bits();  // Set break flag
+        status |= StatusFlag::Unused.bits(); // Set unused flag
+        self.push_stack(status);
+
+        // Set the interrupt disable flag
+        self.set_flag(StatusFlag::InterruptDisable, true);
+        
+        // Set PC to the address stored at 0xFFFE (IRQ vector, same as IRQ)
+        self.pc = self.read_word(0xFFFE);
+        
         0
     }
 
@@ -492,6 +561,13 @@ impl Cpu {
         self.write_byte(0x0100 + self.sp as u16, value);
         self.sp = self.sp.wrapping_sub(1);
     }
+
+    fn push_stack_16(&mut self, value: u16) {
+        let lo = (value & 0xFF) as u8;
+        let hi = (value >> 8) as u8;
+        self.push_stack(lo);
+        self.push_stack(hi);
+    }    
 
     fn pull_stack(&mut self) -> u8 {
         self.sp = self.sp.wrapping_add(1);
@@ -663,7 +739,7 @@ impl Cpu {
                 .join(" ");
 
             let formatted = format!(
-                "${:04X}: {:8} {} {:?}",
+                "${:04X}: {:8} {} ({:?})",
                 pc, byte_str, instr.mnemonic, instr.addressing_mode
             );
 

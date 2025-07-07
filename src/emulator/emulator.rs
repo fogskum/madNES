@@ -107,6 +107,22 @@ impl Emulator {
                         // Step to next instruction
                         step_requested = true;
                     },
+                    Event::KeyDown { 
+                        keycode: Some(Keycode::R),
+                        ..
+                    } => {
+                        // Reset CPU
+                        self.cpu.reset();
+                        println!("CPU reset");
+                    },
+                    Event::KeyDown {
+                        keycode: Some(Keycode::I),
+                        ..
+                    } => {
+                        // interrupt CPU
+                        self.cpu.irq();
+                        println!("CPU interrupted");
+                    },
                     Event::KeyDown {
                         keycode: Some(Keycode::Space),
                         ..
