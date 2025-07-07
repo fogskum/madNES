@@ -362,8 +362,16 @@ impl Cpu {
             }
 
             // Logic instructions
-            0x29 => {
+            0x29 | 0x25 | 0x35 | 0x2D | 0x3D | 0x39 | 0x21 | 0x31 => {
                 self.and(operand_address);
+            }
+            0x49 | 0x45 | 0x55 | 0x4D | 0x5D | 0x59 | 0x41 | 0x51 => {
+                self.eor(operand_address);
+            }
+
+            // Shift instructions
+            0x0A | 0x06 | 0x16 | 0x0E | 0x1E => {
+                self.asl(operand_address, &instruction.addressing_mode);
             }
 
             // Flag instructions
@@ -601,6 +609,13 @@ impl Cpu {
         self.update_nz_flags(self.a);
     }
 
+    // EOR (Exclusive OR) memory with accumulator
+    fn eor(&mut self, address: u16) {
+        let value = self.read_byte(address);
+        self.a ^= value;
+        self.update_nz_flags(self.a);
+    }
+
     // add memory to accumulator with carry
     fn adc(&mut self, address: u16) {
         let value = self.read_byte(address);
@@ -781,6 +796,28 @@ impl Cpu {
         self.set_flag(StatusFlag::Zero, result == 0);
         self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
         self.set_flag(StatusFlag::Overflow, value & 0x40 != 0);
+    }
+
+    // Arithmetic Shift Left
+    fn asl(&mut self, address: u16, addressing_mode: &AddressingMode) {
+        match addressing_mode {
+            AddressingMode::Implied => {
+                let carry = self.a & 0x80 != 0;
+                self.a <<= 1;
+                self.set_flag(StatusFlag::Carry, carry);
+                self.set_flag(StatusFlag::Zero, self.a == 0);
+                self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+            }
+            _ => {
+                let mut value = self.read_byte(address);
+                let carry = value & 0x80 != 0;
+                value <<= 1;
+                self.write_byte(address, value);
+                self.set_flag(StatusFlag::Carry, carry);
+                self.set_flag(StatusFlag::Zero, value == 0);
+                self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
+            }
+        }
     }
 
     // Logical Shift Right
@@ -1122,5 +1159,101 @@ mod tests {
         assert_eq!(cpu.a, 0x07); // Should also be loaded into accumulator
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(!cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_eor_immediate() {
+        let mut cpu = Cpu::new();
+        // EOR #$FF - should flip all bits
+        cpu.load_program(vec![0x49, 0xFF, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.a = 0b10101010; // Set A to known pattern AFTER load_program
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute EOR #$FF
+        assert_eq!(cpu.a, 0b01010101); // All bits should be flipped
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_eor_zero_flag() {
+        let mut cpu = Cpu::new();
+        // EOR #$42 - should result in zero
+        cpu.load_program(vec![0x49, 0x42, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.a = 0x42; // Set A AFTER load_program
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute EOR #$42
+        assert_eq!(cpu.a, 0x00);
+        assert!(cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_asl_accumulator() {
+        let mut cpu = Cpu::new();
+        // ASL A - shift left accumulator
+        cpu.load_program(vec![0x0A, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.a = 0b01000001; // Set A to known pattern AFTER load_program
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute ASL A
+        assert_eq!(cpu.a, 0b10000010); // Should be shifted left
+        assert!(!cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 0, so no carry
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(cpu.get_flag(StatusFlag::Negative)); // Bit 7 is now 1
+    }
+
+    #[test]
+    fn test_asl_carry_flag() {
+        let mut cpu = Cpu::new();
+        // ASL A - shift left accumulator
+        cpu.load_program(vec![0x0A, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.a = 0b10000000; // Set A with bit 7 set AFTER load_program
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute ASL A
+        assert_eq!(cpu.a, 0b00000000); // Should be shifted left, result is 0
+        assert!(cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 1, so carry set
+        assert!(cpu.get_flag(StatusFlag::Zero)); // Result is zero
+        assert!(!cpu.get_flag(StatusFlag::Negative)); // Bit 7 is now 0
+    }
+
+    #[test]
+    fn test_asl_memory() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x10, 0b00110011); // Set memory value
+        // ASL $10 - shift left memory at zero page
+        cpu.load_program(vec![0x06, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute ASL $10
+        assert_eq!(cpu.read_byte(0x10), 0b01100110); // Should be shifted left
+        assert!(!cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 0, so no carry
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative)); // Bit 7 is still 0
+    }
+
+    #[test]
+    fn test_eor_asl_integration() {
+        let mut cpu = Cpu::new();
+        // Test a program that uses EOR and ASL together
+        // Initialize A with a pattern
+        // EOR #$55   ; flip some bits
+        // ASL A      ; shift left
+        // EOR #$AA   ; flip different bits
+        cpu.load_program(vec![0x49, 0x55, 0x0A, 0x49, 0xAA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.a = 0b11110000; // Set initial pattern AFTER load_program
+        cpu.pc = 0x8000;
+        
+        // Execute EOR #$55
+        cpu.step();
+        assert_eq!(cpu.a, 0b10100101); // 0b11110000 ^ 0b01010101 = 0b10100101
+        
+        // Execute ASL A
+        cpu.step();
+        assert_eq!(cpu.a, 0b01001010); // 0b10100101 << 1 = 0b01001010
+        assert!(cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 1
+        
+        // Execute EOR #$AA
+        cpu.step();
+        assert_eq!(cpu.a, 0b11100000); // 0b01001010 ^ 0b10101010 = 0b11100000
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(cpu.get_flag(StatusFlag::Negative)); // Bit 7 is 1
     }
 }

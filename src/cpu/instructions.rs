@@ -112,6 +112,13 @@ lazy_static! {
         // logical
         map.insert(0x29, Instruction::new("AND", 0x29, AddressingMode::Immediate, 2, 2));
         map.insert(0x49, Instruction::new("EOR", 0x49, AddressingMode::Immediate, 2, 2));
+        map.insert(0x45, Instruction::new("EOR", 0x45, AddressingMode::ZeroPage, 3, 2));
+        map.insert(0x55, Instruction::new("EOR", 0x55, AddressingMode::ZeroPageX, 4, 2));
+        map.insert(0x4D, Instruction::new("EOR", 0x4D, AddressingMode::Absolute, 4, 3));
+        map.insert(0x5D, Instruction::new("EOR", 0x5D, AddressingMode::AbsoluteX, 4, 3));
+        map.insert(0x59, Instruction::new("EOR", 0x59, AddressingMode::AbsoluteY, 4, 3));
+        map.insert(0x41, Instruction::new("EOR", 0x41, AddressingMode::IndirectX, 6, 2));
+        map.insert(0x51, Instruction::new("EOR", 0x51, AddressingMode::IndirectY, 5, 2));
         map.insert(0x09, Instruction::new("ORA", 0x09, AddressingMode::Immediate, 2, 2));
         map.insert(0x05, Instruction::new("ORA", 0x05, AddressingMode::ZeroPage, 3, 2));
         map.insert(0x15, Instruction::new("ORA", 0x15, AddressingMode::ZeroPageX, 4, 2));
@@ -123,6 +130,10 @@ lazy_static! {
 
         // shift
         map.insert(0x0A, Instruction::new("ASL", 0x0A, AddressingMode::Implied, 2, 1));
+        map.insert(0x06, Instruction::new("ASL", 0x06, AddressingMode::ZeroPage, 5, 2));
+        map.insert(0x16, Instruction::new("ASL", 0x16, AddressingMode::ZeroPageX, 6, 2));
+        map.insert(0x0E, Instruction::new("ASL", 0x0E, AddressingMode::Absolute, 6, 3));
+        map.insert(0x1E, Instruction::new("ASL", 0x1E, AddressingMode::AbsoluteX, 7, 3));
         map.insert(0x4A, Instruction::new("LSR", 0x4A, AddressingMode::Implied, 2, 1));
         map.insert(0x46, Instruction::new("LSR", 0x46, AddressingMode::ZeroPage, 5, 2));
         map.insert(0x56, Instruction::new("LSR", 0x56, AddressingMode::ZeroPageX, 6, 2));
