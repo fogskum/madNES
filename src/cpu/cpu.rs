@@ -260,6 +260,11 @@ impl Cpu {
         self.p & flag != StatusFlag::empty()
     }
 
+    fn update_nz_flags(&mut self, value: u8) {
+        self.set_flag(StatusFlag::Zero, value == 0);
+        self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
+    }
+
     // Getter methods for CPU registers
     pub fn get_a(&self) -> u8 {
         self.a
@@ -559,15 +564,13 @@ impl Cpu {
     // branch on equal
     fn tax(&mut self) {
         self.x = self.a;
-        self.set_flag(StatusFlag::Zero, self.x == 0);
-        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+        self.update_nz_flags(self.x);
     }
 
     // increment X register
     fn inx(&mut self) {
         self.x = self.x.wrapping_add(1);
-        self.set_flag(StatusFlag::Zero, self.x == 0);
-        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+        self.update_nz_flags(self.x);
     }
 
     // No operation
@@ -586,43 +589,37 @@ impl Cpu {
     // transfer accumulator to X register
     fn txa(&mut self) {
         self.a = self.x;
-        self.set_flag(StatusFlag::Zero, self.a == 0);
-        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+        self.update_nz_flags(self.a);
     }
 
     // transfer accumulator to Y register
     fn tya(&mut self) {
         self.a = self.y;
-        self.set_flag(StatusFlag::Zero, self.a == 0);
-        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+        self.update_nz_flags(self.a);
     }
 
     // transfer Y register to accumulator
     fn tay(&mut self) {
         self.y = self.a;
-        self.set_flag(StatusFlag::Zero, self.y == 0);
-        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+        self.update_nz_flags(self.y);
     }
 
     // increment Y register
     fn iny(&mut self) {
         self.y = self.y.wrapping_add(1);
-        self.set_flag(StatusFlag::Zero, self.y == 0);
-        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+        self.update_nz_flags(self.y);
     }
 
     // decrement X register
     fn dex(&mut self) {
         self.x = self.x.wrapping_sub(1);
-        self.set_flag(StatusFlag::Zero, self.x == 0);
-        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+        self.update_nz_flags(self.x);
     }
 
     // decrement Y register
     fn dey(&mut self) {
         self.y = self.y.wrapping_sub(1);
-        self.set_flag(StatusFlag::Zero, self.y == 0);
-        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+        self.update_nz_flags(self.y);
     }
 
     // load X register with value at address
@@ -633,8 +630,7 @@ impl Cpu {
         };
 
         self.x = value;
-        self.set_flag(StatusFlag::Zero, self.x == 0);
-        self.set_flag(StatusFlag::Negative, self.x & 0x80 != 0);
+        self.update_nz_flags(self.x);
     }
 
     // load Y register with value at address
@@ -645,8 +641,7 @@ impl Cpu {
         };
 
         self.y = value;
-        self.set_flag(StatusFlag::Zero, self.y == 0);
-        self.set_flag(StatusFlag::Negative, self.y & 0x80 != 0);
+        self.update_nz_flags(self.y);
     }
 
     // return from interrupt
@@ -679,8 +674,7 @@ impl Cpu {
         };
 
         self.a = value;
-        self.set_flag(StatusFlag::Zero, self.a == 0);
-        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+        self.update_nz_flags(self.a);
     }
 
     // OR memory with accumulator
@@ -691,8 +685,7 @@ impl Cpu {
         };
 
         self.a |= value;
-        self.set_flag(StatusFlag::Zero, self.a == 0);
-        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+        self.update_nz_flags(self.a);
     }
 
     // AND memory with accumulator
@@ -703,8 +696,7 @@ impl Cpu {
         };
 
         self.a &= value;
-        self.set_flag(StatusFlag::Zero, self.a == 0);
-        self.set_flag(StatusFlag::Negative, self.a & 0x80 != 0);
+        self.update_nz_flags(self.a);
     }
 
     // add memory to accumulator with carry
@@ -722,8 +714,7 @@ impl Cpu {
         let (sum1, carry1) = self.a.overflowing_add(value);
         let (sum2, carry2) = sum1.overflowing_add(carry);
         self.set_flag(StatusFlag::Carry, carry1 || carry2);
-        self.set_flag(StatusFlag::Zero, sum2 == 0);
-        self.set_flag(StatusFlag::Negative, sum2 & 0x80 != 0);
+        self.update_nz_flags(sum2);
         self.set_flag(
             StatusFlag::Overflow,
             ((self.a ^ sum2) & (value ^ sum2) & 0x80) != 0,
@@ -750,8 +741,7 @@ impl Cpu {
         let (sum1, carry1) = self.a.overflowing_add(value);
         let (sum2, carry2) = sum1.overflowing_add(carry);
         self.set_flag(StatusFlag::Carry, carry1 || carry2);
-        self.set_flag(StatusFlag::Zero, sum2 == 0);
-        self.set_flag(StatusFlag::Negative, sum2 & 0x80 != 0);
+        self.update_nz_flags(sum2);
         self.set_flag(
             StatusFlag::Overflow,
             ((self.a ^ sum2) & (value ^ sum2) & 0x80) != 0,
@@ -931,8 +921,7 @@ impl Cpu {
         let mut value = self.read_byte(address);
         value = value.wrapping_sub(1);
         self.write_byte(address, value);
-        self.set_flag(StatusFlag::Zero, value == 0);
-        self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
+        self.update_nz_flags(value);
     }
 }
 
