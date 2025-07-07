@@ -47,10 +47,10 @@ lazy_static! {
         map.insert(0x19, Instruction::new("ORA", 0x19, AddressingMode::AbsoluteY, 4, 3));
         map.insert(0x01, Instruction::new("ORA", 0x01, AddressingMode::IndirectX, 6, 2));
         map.insert(0x11, Instruction::new("ORA", 0x11, AddressingMode::IndirectY, 5, 2));
-        map.insert(0x89, Instruction::new("BIT", 0x89, AddressingMode::Immediate, 2, 3));
-        map.insert(0x3C, Instruction::new("BIT", 0x3C, AddressingMode::AbsoluteX, 4, 3));
+        
+        map.insert(0x2C, Instruction::new("BIT", 0x2C, AddressingMode::Absolute, 4, 3));
         map.insert(0x24, Instruction::new("BIT", 0x24, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x34, Instruction::new("BIT", 0x34, AddressingMode::ZeroPageX, 4, 2));
+        
         map.insert(0xC9, Instruction::new("CMP", 0xC9, AddressingMode::Immediate, 2, 2));
         map.insert(0xC5, Instruction::new("CMP", 0xC5, AddressingMode::ZeroPage, 3, 2));
         map.insert(0xD5, Instruction::new("CMP", 0xD5, AddressingMode::ZeroPageX, 4, 2));
@@ -74,17 +74,18 @@ lazy_static! {
         map.insert(0xB9, Instruction::new("LDA", 0xB9, AddressingMode::AbsoluteY, 4, 3));
         map.insert(0xA1, Instruction::new("LDA", 0xA1, AddressingMode::IndirectX, 6, 2));
         map.insert(0xB1, Instruction::new("LDA", 0xB1, AddressingMode::IndirectY, 5, 2));
+        
         map.insert(0xA2, Instruction::new("LDX", 0xA2, AddressingMode::Immediate, 2, 2));
         map.insert(0xA6, Instruction::new("LDX", 0xA6, AddressingMode::ZeroPage, 3, 2));
         map.insert(0xB6, Instruction::new("LDX", 0xB6, AddressingMode::ZeroPageY, 4, 2));
         map.insert(0xAE, Instruction::new("LDX", 0xAE, AddressingMode::Absolute, 4, 3));
         map.insert(0xBE, Instruction::new("LDX", 0xBE, AddressingMode::AbsoluteY, 4, 3));
+        
         map.insert(0xA0, Instruction::new("LDY", 0xA0, AddressingMode::Immediate, 2, 2));
         map.insert(0xA4, Instruction::new("LDY", 0xA4, AddressingMode::ZeroPage, 3, 2));
         map.insert(0xB4, Instruction::new("LDY", 0xB4, AddressingMode::ZeroPageX, 4, 2));
         map.insert(0xAC, Instruction::new("LDY", 0xAC, AddressingMode::Absolute, 4, 3));
         map.insert(0xBC, Instruction::new("LDY", 0xBC, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0x85, Instruction::new("STA", 0x85, AddressingMode::ZeroPage, 3, 2));
         map.insert(0xAA, Instruction::new("TAX", 0xAA, AddressingMode::Implied, 2, 1));
         map.insert(0xE8, Instruction::new("INX", 0xE8, AddressingMode::Implied, 2, 1));
         // arithmetic
@@ -116,7 +117,7 @@ lazy_static! {
         map.insert(0xD0, Instruction::new("BNE", 0xD0, AddressingMode::Implied, 2, 2));
         map.insert(0x10, Instruction::new("BPL", 0x10, AddressingMode::Implied, 2, 2));
         map.insert(0x20, Instruction::new("JSR", 0x20, AddressingMode::Absolute, 6, 3));
-        map.insert(0x30, Instruction::new("BIM", 0x30, AddressingMode::Implied, 2, 2));
+        map.insert(0x30, Instruction::new("BMI", 0x30, AddressingMode::Implied, 2, 2));
         map.insert(0x60, Instruction::new("RTS", 0x60, AddressingMode::Implied, 6, 1));
         // stack
         map.insert(0x48, Instruction::new("PHA", 0x48, AddressingMode::Implied, 1, 3));
@@ -125,12 +126,15 @@ lazy_static! {
         map.insert(0xEA, Instruction::new("NOP", 0xEA, AddressingMode::Implied, 2, 1));
         map.insert(0x4C, Instruction::new("JMP", 0x4C, AddressingMode::Absolute, 3, 3));
         map.insert(0x6C, Instruction::new("JMP", 0x6C, AddressingMode::IndirectX, 5, 3));
+        
+        map.insert(0x85, Instruction::new("STA", 0x85, AddressingMode::ZeroPage, 3, 2));
         map.insert(0x8D, Instruction::new("STA", 0x8D, AddressingMode::Absolute, 4, 3));
         map.insert(0x9D, Instruction::new("STA", 0x9D, AddressingMode::AbsoluteX, 5, 3));
         map.insert(0x99, Instruction::new("STA", 0x99, AddressingMode::AbsoluteY, 5, 3));
         map.insert(0x81, Instruction::new("STA", 0x81, AddressingMode::IndirectX, 6, 2));
         map.insert(0x91, Instruction::new("STA", 0x91, AddressingMode::IndirectY, 6, 2));
         map.insert(0x95, Instruction::new("STA", 0x95, AddressingMode::ZeroPageX, 4, 2));
+        
         map.insert(0x86, Instruction::new("STX", 0x86, AddressingMode::ZeroPage, 3, 2));
         map.insert(0x96, Instruction::new("STX", 0x96, AddressingMode::ZeroPageY, 4, 2));
         map.insert(0x8E, Instruction::new("STX", 0x8E, AddressingMode::Absolute, 4, 3));

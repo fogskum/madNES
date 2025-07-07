@@ -8,6 +8,7 @@ use sdl2::rect::Rect;
 use sdl2::render::{Canvas, TextureCreator};
 use sdl2::video::{Window, WindowContext};
 use sdl2::{EventPump};
+use sdl2::ttf::Sdl2TtfContext;
 use std::time::{Duration, Instant};
 
 pub struct Emulator {
@@ -18,6 +19,7 @@ pub struct Emulator {
     rotation: f64,
     disassembly_lines: Vec<String>,
     texture_creator: TextureCreator<WindowContext>,
+    ttf_context: Sdl2TtfContext,
 }
 
 impl Emulator {
@@ -28,7 +30,7 @@ impl Emulator {
         let video_subsystem = sdl_context.video()?;
 
         // Initialize TTF
-        let _ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
         
         // Create main emulator window
         let main_window = video_subsystem
@@ -75,6 +77,7 @@ impl Emulator {
             rotation: 0.0,
             disassembly_lines: Vec::new(),
             texture_creator,
+            ttf_context,
         })
     }
 
@@ -286,9 +289,8 @@ impl Emulator {
     }
 
     fn render_text_simple(&mut self, text: &str, start_x: i32, y: i32) -> Result<(), String> {
-        // Initialize TTF context for this call
-        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
-        let font = ttf_context.load_font("assets/font.ttf", 12).map_err(|e| e.to_string())?;
+        // Use the pre-initialized TTF context and load font once per call (still cached by OS)
+        let font = self.ttf_context.load_font("assets/font.ttf", 12).map_err(|e| e.to_string())?;
         
         // Create a surface from the text
         let surface = font
