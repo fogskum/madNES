@@ -21,7 +21,7 @@ pub trait Memory {
 pub enum AddressingMode {
     None,
     Immediate,
-    Implied,
+    Implied, // same as Accumulator
     IndirectX,
     IndirectY,
     ZeroPage,
@@ -40,7 +40,6 @@ impl fmt::Display for AddressingMode {
             AddressingMode::None => write!(f, "None"),
             AddressingMode::Immediate => write!(f, "Immediate"),
             AddressingMode::Implied => write!(f, "Implied"),
-            //AddressingMode::Indirect => write!(f, "Indirect"),
             AddressingMode::IndirectX => write!(f, "IndirectX"),
             AddressingMode::IndirectY => write!(f, "IndirectY"),
             AddressingMode::ZeroPage => write!(f, "ZeroPage"),

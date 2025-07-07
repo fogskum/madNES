@@ -82,8 +82,13 @@ impl Emulator {
         })
     }
 
+    pub fn reset(&mut self) {
+        self.cpu.reset();
+        self.disassembly_lines.clear();
+    }
+
     pub fn run(&mut self, game_code: Vec<u8>) -> Result<(), String> {
-        self.cpu.load_program(game_code, 0x0600);
+        self.cpu.load_program(game_code, 0x0600)?;
 
         let mut last_update = Instant::now();
         let mut last_cpu_step = Instant::now();
@@ -92,8 +97,9 @@ impl Emulator {
         let mut step_requested = false;
         
         'running: loop {
-            // Handle events
-            for event in self.event_pump.poll_iter() {
+            // Collect events first to avoid multiple mutable borrows of self
+            let events: Vec<Event> = self.event_pump.poll_iter().collect();
+            for event in events {
                 match event {
                     Event::Quit { .. }
                     | Event::KeyDown {
@@ -111,9 +117,8 @@ impl Emulator {
                         keycode: Some(Keycode::R),
                         ..
                     } => {
-                        // Reset CPU
-                        self.cpu.reset();
-                        println!("CPU reset");
+                        self.reset();
+                        println!("Emulator reset");
                     },
                     Event::KeyDown {
                         keycode: Some(Keycode::I),
@@ -251,6 +256,11 @@ impl Emulator {
         self.debug_canvas.set_draw_color(Color::RGB(255, 200, 255));
         let count_text = format!("INSTRUCTIONS: {}", self.cpu.get_instruction_count());
         self.render_text_simple(&count_text, 300, 170)?;
+
+        // Show cycles count
+        self.debug_canvas.set_draw_color(Color::RGB(255, 200, 255));
+        let cycles_text = format!("CYCLES: {}", self.cpu.get_cycles());
+        self.render_text_simple(&cycles_text, 450, 170)?;
         
         // Add separator
         self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));

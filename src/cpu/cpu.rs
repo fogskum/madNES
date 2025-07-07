@@ -32,7 +32,7 @@ pub struct Cpu {
     // Status register
     pub p: StatusFlag,
     pub memory: [u8; 0x10000],
-    pub cycles: u8,
+    pub cycles: u64,
     pub instruction_count: u64,
 }
 
@@ -46,9 +46,9 @@ impl Memory for Cpu {
     }
 }
 
-impl Cpu {
-    pub fn new() -> Self {
-        Cpu {
+impl Default for Cpu {
+    fn default() -> Self {
+        Self {
             a: 0,
             x: 0,
             y: 0,
@@ -59,6 +59,12 @@ impl Cpu {
             cycles: 0,
             instruction_count: 0,
         }
+    }
+}
+
+impl Cpu {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn irq(&mut self) {
@@ -159,7 +165,7 @@ impl Cpu {
         self.p.bits()
     }
 
-    pub fn get_cycles(&self) -> u8 {
+    pub fn get_cycles(&self) -> u64 {
         self.cycles
     }
 
@@ -172,20 +178,21 @@ impl Cpu {
     }
 
     // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
-    pub fn load_program(&mut self, program: Vec<u8>, address: u16) {
+    pub fn load_program(&mut self, program: Vec<u8>, address: u16) -> Result<(), String> {
         let start = address as usize;
         let end = start + program.len();
         if end > self.memory.len() {
-            panic!(
+            return Err(format!(
                 "Program does not fit in memory: end address {:#X} exceeds memory size {:#X}",
                 end,
                 self.memory.len()
-            );
+            ));
         }
         self.memory[start..end].copy_from_slice(&program);
         self.write_word(0xFFFC, address);
         self.reset();
         self.disassemble(start as u16, end as u16);
+        Ok(())
     }
 
     pub fn run(&mut self, show_disassembly: bool) {
@@ -207,11 +214,9 @@ impl Cpu {
         let opcode = self.read_byte(self.pc);
 
         // get instruction metadata for opcode
-        if INSTRUCTIONS.get(&opcode).is_none() {
-            panic!("Unknown opcode: {:#X} at PC: {:#X}", opcode, self.pc);
-        }
-
-        let instruction = INSTRUCTIONS.get(&opcode).unwrap();
+        let instruction = INSTRUCTIONS
+            .get(&opcode)
+            .unwrap_or_else(|| panic!("Unknown opcode: {:#X} at PC: {:#X}", opcode, self.pc));
 
         self.pc += 1;
 
@@ -220,32 +225,32 @@ impl Cpu {
 
         match instruction.opcode {
             0x00 => {
-                self.brk(operand_address, &instruction.addressing_mode);
+                self.brk();
                 return false; // Stop execution on BRK
             }
             // LDA instructions
             0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
-                self.lda(operand_address, &instruction.addressing_mode);
+                self.lda(operand_address);
             }
 
             // ORA instructions
             0x09 | 0x05 | 0x15 | 0x0D | 0x1D | 0x19 | 0x01 | 0x11 => {
-                self.ora(operand_address, &instruction.addressing_mode);
+                self.ora(operand_address);
             }
 
             // CMP instructions
             0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
-                self.cmp(operand_address, &instruction.addressing_mode);
+                self.cmp(operand_address);
             }
 
             // CPX instructions
             0xE0 | 0xE4 | 0xEC => {
-                self.cpx(operand_address, &instruction.addressing_mode);
+                self.cpx(operand_address);
             }
 
             // CPY instructions
             0xC0 | 0xC4 | 0xCC => {
-                self.cpy(operand_address, &instruction.addressing_mode);
+                self.cpy(operand_address);
             }
 
             // Transfer instructions
@@ -281,12 +286,12 @@ impl Cpu {
 
             // LDX instructions
             0xA2 | 0xA6 | 0xAE | 0xB6 | 0xBE => {
-                self.ldx(operand_address, &instruction.addressing_mode);
+                self.ldx(operand_address);
             }
 
             // LDY instructions
             0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
-                self.ldy(operand_address, &instruction.addressing_mode);
+                self.ldy(operand_address);
             }
 
             // Jump and subroutine instructions
@@ -328,17 +333,17 @@ impl Cpu {
 
             // BIT instructions
             0x24 | 0x2C => {
-                self.bit(operand_address, &instruction.addressing_mode);
+                self.bit(operand_address);
             }
 
             // ADC instructions
             0x69 | 0x65 | 0x75 | 0x6D | 0x7D | 0x79 | 0x61 | 0x71 => {
-                self.adc(operand_address, &instruction.addressing_mode);
+                self.adc(operand_address);
             }
 
             // SBC instructions
             0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
-                self.sbc(operand_address, &instruction.addressing_mode);
+                self.sbc(operand_address);
             }
 
             // LSR instructions
@@ -348,12 +353,17 @@ impl Cpu {
 
             // DEC instructions
             0xC6 | 0xD6 | 0xCE | 0xDE => {
-                self.dec(operand_address, &instruction.addressing_mode);
+                self.dec(operand_address);
+            }
+
+            // INC instructions
+            0xE6 | 0xF6 | 0xEE | 0xFE => {
+                self.inc(operand_address);
             }
 
             // Logic instructions
             0x29 => {
-                self.and(operand_address, &instruction.addressing_mode);
+                self.and(operand_address);
             }
 
             // Flag instructions
@@ -376,6 +386,7 @@ impl Cpu {
             }
         }
 
+        // jump instructions already set the new PC value
         if instruction.mnemonic != "JSR"
             && instruction.mnemonic != "JMP"
             && instruction.mnemonic != "RTS"
@@ -386,6 +397,7 @@ impl Cpu {
         }
 
         self.instruction_count += 1;
+        self.cycles += instruction.cycles as u64;
 
         true
     }
@@ -426,7 +438,7 @@ impl Cpu {
         }
     }
 
-    fn brk(&mut self, _address: u16, _addressing_mode: &AddressingMode) -> u8 {
+    fn brk(&mut self) -> u8 {
         // BRK is a software interrupt
         // Increment PC by 1 to point to the next instruction after BRK
         self.pc += 1;
@@ -473,6 +485,8 @@ impl Cpu {
         self.x = self.x.wrapping_add(1);
         self.update_nz_flags(self.x);
     }
+
+
 
     // No operation
     fn nop(&mut self) {}
@@ -524,23 +538,15 @@ impl Cpu {
     }
 
     // load X register with value at address
-    fn ldx(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn ldx(&mut self, address: u16) {
+        let value = self.read_byte(address);
         self.x = value;
         self.update_nz_flags(self.x);
     }
 
     // load Y register with value at address
-    fn ldy(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn ldy(&mut self, address: u16) {
+        let value = self.read_byte(address);
         self.y = value;
         self.update_nz_flags(self.y);
     }
@@ -562,12 +568,12 @@ impl Cpu {
         self.sp = self.sp.wrapping_sub(1);
     }
 
-    fn push_stack_16(&mut self, value: u16) {
-        let lo = (value & 0xFF) as u8;
-        let hi = (value >> 8) as u8;
-        self.push_stack(lo);
-        self.push_stack(hi);
-    }    
+    // fn push_stack_16(&mut self, value: u16) {
+    //     let lo = (value & 0xFF) as u8;
+    //     let hi = (value >> 8) as u8;
+    //     self.push_stack(lo);
+    //     self.push_stack(hi);
+    // }    
 
     fn pull_stack(&mut self) -> u8 {
         self.sp = self.sp.wrapping_add(1);
@@ -575,45 +581,29 @@ impl Cpu {
     }
 
     // load accumulator with value at address
-    fn lda(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn lda(&mut self, address: u16) {
+        let value = self.read_byte(address);
         self.a = value;
         self.update_nz_flags(self.a);
     }
 
     // OR memory with accumulator
-    fn ora(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn ora(&mut self, address: u16) {
+        let value = self.read_byte(address);
         self.a |= value;
         self.update_nz_flags(self.a);
     }
 
     // AND memory with accumulator
-    fn and(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn and(&mut self, address: u16) {
+        let value = self.read_byte(address);
         self.a &= value;
         self.update_nz_flags(self.a);
     }
 
     // add memory to accumulator with carry
-    fn adc(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn adc(&mut self, address: u16) {
+        let value = self.read_byte(address);
         let carry = if self.get_flag(StatusFlag::Carry) {
             1
         } else {
@@ -634,18 +624,15 @@ impl Cpu {
     // Note: 6502 uses two's complement for subtraction
     // so we need to invert the bits of the value and add 1
     // to perform the subtraction.
-    fn sbc(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn sbc(&mut self, address: u16) {
+        let mut value = self.read_byte(address);
         let carry = if self.get_flag(StatusFlag::Carry) {
             1
         } else {
             0
         };
-        let value = value ^ 0xFF; // one's complement for subtraction
+
+        value = value ^ 0xFF; // one's complement for subtraction
         let (sum1, carry1) = self.a.overflowing_add(value);
         let (sum2, carry2) = sum1.overflowing_add(carry);
         self.set_flag(StatusFlag::Carry, carry1 || carry2);
@@ -658,12 +645,8 @@ impl Cpu {
     }
 
     // compare memory and index X
-    fn cpx(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn cpx(&mut self, address: u16) {
+        let value = self.read_byte(address);
         let result = self.x.wrapping_sub(value);
         self.set_flag(StatusFlag::Carry, self.x >= value);
         self.set_flag(StatusFlag::Zero, self.x == value);
@@ -671,12 +654,8 @@ impl Cpu {
     }
 
     // compare memory with accumulator
-    fn cmp(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn cmp(&mut self, address: u16) {
+        let value = self.read_byte(address);
         let result = self.a.wrapping_sub(value);
         self.set_flag(StatusFlag::Carry, self.a >= value);
         self.set_flag(StatusFlag::Zero, self.a == value);
@@ -684,12 +663,8 @@ impl Cpu {
     }
 
     // compare memory and index Y
-    fn cpy(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn cpy(&mut self, address: u16) {
+        let value = self.read_byte(address);
         let result = self.y.wrapping_sub(value);
         self.set_flag(StatusFlag::Carry, self.y >= value);
         self.set_flag(StatusFlag::Zero, self.y == value);
@@ -800,12 +775,8 @@ impl Cpu {
     }
 
     // test bits in memory with accumulator
-    fn bit(&mut self, address: u16, addressing_mode: &AddressingMode) {
-        let value = match addressing_mode {
-            AddressingMode::Immediate => self.read_byte(address),
-            _ => self.read_byte(address),
-        };
-
+    fn bit(&mut self, address: u16) {
+        let value = self.read_byte(address);
         let result = self.a & value;
         self.set_flag(StatusFlag::Zero, result == 0);
         self.set_flag(StatusFlag::Negative, value & 0x80 != 0);
@@ -835,9 +806,17 @@ impl Cpu {
     }
 
     // Decrement memory
-    fn dec(&mut self, address: u16, _addressing_mode: &AddressingMode) {
+    fn dec(&mut self, address: u16) {
         let mut value = self.read_byte(address);
         value = value.wrapping_sub(1);
+        self.write_byte(address, value);
+        self.update_nz_flags(value);
+    }
+
+    // Increment memory
+    fn inc(&mut self, address: u16) {
+        let mut value = self.read_byte(address);
+        value = value.wrapping_add(1);
         self.write_byte(address, value);
         self.update_nz_flags(value);
     }
@@ -889,7 +868,7 @@ mod tests {
     fn test_load_program() {
         let mut cpu = Cpu::new();
         let program = vec![0x42, 0x42];
-        cpu.load_program(program, PROGRAM_ADDRESS);
+        cpu.load_program(program, PROGRAM_ADDRESS).unwrap();
         assert_eq!(cpu.read_byte(PROGRAM_ADDRESS + 0), 0x42);
         assert_eq!(cpu.read_byte(PROGRAM_ADDRESS + 1), 0x42);
     }
@@ -902,7 +881,7 @@ mod tests {
         // INX          /* increment X */
         // BRK          /* break */
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = PROGRAM_ADDRESS;
         cpu.run(false);
         assert_eq!(cpu.x, 0xC1);
@@ -911,7 +890,7 @@ mod tests {
     #[test]
     fn test_lda_immediate() {
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = PROGRAM_ADDRESS;
         cpu.run(true);
         assert_eq!(cpu.a, 0x42);
@@ -922,7 +901,7 @@ mod tests {
     #[test]
     fn test_lda_zero_flag() {
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0x00, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0xA9, 0x00, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
         cpu.run(false);
         assert_eq!(cpu.a, 0x00);
@@ -932,7 +911,7 @@ mod tests {
     #[test]
     fn test_lda_negative_flag() {
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
         cpu.run(false);
         assert_eq!(cpu.a, 0xFF);
@@ -943,7 +922,7 @@ mod tests {
     fn test_lda_zeropage() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x77); // value at $10
-        cpu.load_program(vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
         cpu.run(true);
         assert_eq!(cpu.a, 0x77);
@@ -953,7 +932,7 @@ mod tests {
     fn test_bvc_branch_taken() {
         let mut cpu = Cpu::new();
         // BVC $02 - should branch 2 bytes forward if overflow is clear
-        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
         cpu.pc = 0x8000;
         cpu.step(); // Execute BVC
@@ -965,7 +944,7 @@ mod tests {
     fn test_bvc_branch_not_taken() {
         let mut cpu = Cpu::new();
         // BVC $02 - should not branch if overflow is set
-        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag AFTER load_program
         cpu.pc = 0x8000;
         cpu.step(); // Execute BVC
@@ -977,7 +956,7 @@ mod tests {
     fn test_bvs_branch_taken() {
         let mut cpu = Cpu::new();
         // BVS $02 - should branch 2 bytes forward if overflow is set
-        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
+        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag
         cpu.pc = 0x8000;
         cpu.step(); // Execute BVS
@@ -989,11 +968,159 @@ mod tests {
     fn test_bvs_branch_not_taken() {
         let mut cpu = Cpu::new();
         // BVS $02 - should not branch if overflow is clear
-        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS);
-        cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (redundant but explicit)
+        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
         cpu.pc = 0x8000;
         cpu.step(); // Execute BVS
         // PC should be at 0x8000 + 2 (instruction length) = 0x8002
         assert_eq!(cpu.pc, 0x8002);
+    }
+
+    #[test]
+    fn test_inc_zeropage() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x10, 0x42); // value at $10
+        // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute INC $10
+        assert_eq!(cpu.read_byte(0x10), 0x43);
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_inc_zeropage_x() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x15, 0x7E); // value at $10 + X = $15
+        // INC $10,X - increment value at zero page address $10 + X
+        cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.x = 0x05; // Set X AFTER load_program since it calls reset()
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute INC $10,X
+        assert_eq!(cpu.read_byte(0x15), 0x7F);
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative));
+    }
+
+    #[test]
+    fn test_inc_absolute() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x3000, 0x80); // value at $3000
+        // INC $3000 - increment value at absolute address $3000
+        cpu.load_program(vec![0xEE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute INC $3000
+        assert_eq!(cpu.read_byte(0x3000), 0x81);
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(cpu.get_flag(StatusFlag::Negative)); // 0x81 has bit 7 set
+    }
+
+    #[test]
+    fn test_inc_absolute_x() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x3010, 0xFE); // value at $3000 + X = $3010
+        // INC $3000,X - increment value at absolute address $3000 + X
+        cpu.load_program(vec![0xFE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.x = 0x10; // Set X AFTER load_program since it calls reset()
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute INC $3000,X
+        assert_eq!(cpu.read_byte(0x3010), 0xFF);
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(cpu.get_flag(StatusFlag::Negative)); // 0xFF has bit 7 set
+    }
+
+    #[test]
+    fn test_inc_wraparound_to_zero() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x10, 0xFF); // value at $10
+        // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute INC $10
+        assert_eq!(cpu.read_byte(0x10), 0x00); // Should wrap around to 0
+        assert!(cpu.get_flag(StatusFlag::Zero)); // Zero flag should be set
+        assert!(!cpu.get_flag(StatusFlag::Negative)); // Negative flag should be clear
+    }
+
+    #[test]
+    fn test_inc_negative_flag() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x10, 0x7F); // value at $10
+        // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        cpu.step(); // Execute INC $10
+        assert_eq!(cpu.read_byte(0x10), 0x80); // Should become 0x80
+        assert!(!cpu.get_flag(StatusFlag::Zero)); // Zero flag should be clear
+        assert!(cpu.get_flag(StatusFlag::Negative)); // Negative flag should be set (bit 7 is 1)
+    }
+
+    #[test]
+    fn test_inc_debug() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x10, 0x42); // value at $10
+        println!("Before INC: memory[0x10] = {}", cpu.read_byte(0x10));
+        
+        // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        
+        let opcode = cpu.read_byte(cpu.pc);
+        println!("Opcode: 0x{:02X}", opcode);
+        
+        cpu.step(); // Execute INC $10
+        
+        println!("After INC: memory[0x10] = {}", cpu.read_byte(0x10));
+        assert_eq!(cpu.read_byte(0x10), 0x43);
+    }
+
+    #[test]
+    fn test_inc_zeropage_x_debug() {
+        let mut cpu = Cpu::new();
+        cpu.write_byte(0x15, 0x7E); // value at $10 + X = $15
+        
+        // INC $10,X - increment value at zero page address $10 + X
+        cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.x = 0x05; // Set X AFTER load_program since it calls reset()
+        
+        println!("Before INC: X = {}, memory[0x15] = {}", cpu.x, cpu.read_byte(0x15));
+        cpu.pc = 0x8000;
+        
+        let opcode = cpu.read_byte(cpu.pc);
+        let operand = cpu.read_byte(cpu.pc + 1);
+        println!("Opcode: 0x{:02X}, Operand: 0x{:02X}", opcode, operand);
+        println!("Calculated address should be: 0x{:02X} + 0x{:02X} = 0x{:02X}", operand, cpu.x, operand.wrapping_add(cpu.x));
+        
+        cpu.step(); // Execute INC $10,X
+        
+        println!("After INC: memory[0x15] = {}", cpu.read_byte(0x15));
+        println!("After INC: memory[0x10] = {}", cpu.read_byte(0x10));
+        assert_eq!(cpu.read_byte(0x15), 0x7F);
+    }
+
+    #[test]
+    fn test_inc_integration() {
+        let mut cpu = Cpu::new();
+        // Test a simple program that uses INC to count up
+        // Initialize counter at address 0x20 with value 0x05
+        cpu.write_byte(0x20, 0x05);
+        
+        // Program: 
+        // INC $20    ; increment counter at 0x20
+        // INC $20    ; increment counter at 0x20 again
+        // LDA $20    ; load counter into accumulator
+        // BRK        ; break
+        cpu.load_program(vec![0xE6, 0x20, 0xE6, 0x20, 0xA5, 0x20, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.pc = 0x8000;
+        
+        // Execute the program
+        cpu.run(false);
+        
+        // Verify the counter was incremented twice (0x05 -> 0x07)
+        assert_eq!(cpu.read_byte(0x20), 0x07);
+        assert_eq!(cpu.a, 0x07); // Should also be loaded into accumulator
+        assert!(!cpu.get_flag(StatusFlag::Zero));
+        assert!(!cpu.get_flag(StatusFlag::Negative));
     }
 }
