@@ -1,0 +1,7 @@
+madNES CPU Log - nestest.log format
+====================================
+8000  A9 42    LDA #$42                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  8D 00 30 STA $3000                        A:42 X:00 Y:00 P:24 SP:FD CYC:  2
+8005  A2 10    LDX #$10                         A:42 X:00 Y:00 P:24 SP:FD CYC:  6
+8007  A0 20    LDY #$20                         A:42 X:10 Y:00 P:24 SP:FD CYC:  8
+8009  18       CLC                              A:42 X:10 Y:20 P:24 SP:FD CYC: 10

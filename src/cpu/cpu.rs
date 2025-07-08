@@ -2,6 +2,8 @@ use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
 use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
 use crate::rom::rom::Rom;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 #[allow(dead_code)]
 const PROGRAM_ADDRESS: u16 = 0x8000;
@@ -234,6 +236,18 @@ impl Cpu {
         let instruction = INSTRUCTIONS
             .get(&opcode)
             .unwrap_or_else(|| panic!("Unknown opcode: {:#X} at PC: {:#X}", opcode, self.pc));
+
+        // Collect instruction bytes for logging
+        let mut instruction_bytes = vec![opcode];
+        for i in 1..instruction.bytes {
+            instruction_bytes.push(self.read_byte(self.pc + i as u16));
+        }
+
+        // Get disassembly for logging (now handled in log_cpu_state)
+        // let disassembly = format!("{} ({})", instruction.mnemonic, format!("{:?}", instruction.addressing_mode));
+
+        // Log CPU state before instruction execution
+        self.log_cpu_state(&instruction_bytes, opcode);
 
         self.pc += 1;
 
@@ -873,6 +887,118 @@ impl Cpu {
         value = value.wrapping_add(1);
         self.write_byte(address, value);
         self.update_nz_flags(value);
+    }
+
+    /// Log CPU state in nestest.log format
+    fn log_cpu_state(&self, instruction_bytes: &[u8], opcode: u8) {
+        // Get instruction info
+        let instruction = INSTRUCTIONS.get(&opcode).unwrap();
+        
+        // Build disassembly string based on addressing mode
+        let disassembly = match instruction.addressing_mode {
+            AddressingMode::Implied => instruction.mnemonic.to_string(),
+            AddressingMode::Immediate => {
+                if instruction_bytes.len() > 1 {
+                    format!("{} #${:02X}", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::ZeroPage => {
+                if instruction_bytes.len() > 1 {
+                    format!("{} ${:02X}", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::ZeroPageX => {
+                if instruction_bytes.len() > 1 {
+                    format!("{} ${:02X},X", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::ZeroPageY => {
+                if instruction_bytes.len() > 1 {
+                    format!("{} ${:02X},Y", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::Absolute => {
+                if instruction_bytes.len() > 2 {
+                    let addr = (instruction_bytes[2] as u16) << 8 | instruction_bytes[1] as u16;
+                    format!("{} ${:04X}", instruction.mnemonic, addr)
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::AbsoluteX => {
+                if instruction_bytes.len() > 2 {
+                    let addr = (instruction_bytes[2] as u16) << 8 | instruction_bytes[1] as u16;
+                    format!("{} ${:04X},X", instruction.mnemonic, addr)
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::AbsoluteY => {
+                if instruction_bytes.len() > 2 {
+                    let addr = (instruction_bytes[2] as u16) << 8 | instruction_bytes[1] as u16;
+                    format!("{} ${:04X},Y", instruction.mnemonic, addr)
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::IndirectX => {
+                if instruction_bytes.len() > 1 {
+                    format!("{} (${:02X},X)", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::IndirectY => {
+                if instruction_bytes.len() > 1 {
+                    format!("{} (${:02X}),Y", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::None => instruction.mnemonic.to_string(),
+        };
+        
+        // Format: PC  INSTRUCTION_BYTES  DISASSEMBLY  A:XX X:XX Y:XX P:XX SP:XX CYC:XXX
+        let mut log_line = format!("{:04X}  ", self.pc);
+        
+        // Add instruction bytes (pad to 8 characters)
+        let bytes_str = instruction_bytes.iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
+        log_line.push_str(&format!("{:8} ", bytes_str));
+        
+        // Add disassembly (pad to 32 characters)
+        log_line.push_str(&format!("{:32} ", disassembly));
+        
+        // Add register states
+        log_line.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:3}",
+            self.a, self.x, self.y, self.p.bits(), self.sp, self.cycles));
+        
+        // Write to log file
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("madnes.log")
+        {
+            writeln!(file, "{}", log_line).ok();
+        }
+    }
+
+    /// Initialize the log file (clear previous content)
+    pub fn init_log() {
+        if let Ok(mut file) = std::fs::File::create("madnes.log") {
+            writeln!(file, "madNES CPU Log - nestest.log format").ok();
+            writeln!(file, "====================================").ok();
+        }
     }
 }
 

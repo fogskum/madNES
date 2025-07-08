@@ -88,6 +88,10 @@ impl Emulator {
             println!("Loaded ROM: {} PRG ROM, {} CHR ROM, Mapper: {}", 
                      rom.prg_rom.len(), rom.chr_rom.len(), rom.mapper);
             
+            // Initialize CPU log file
+            use crate::cpu::cpu::Cpu;
+            Cpu::init_log();
+            
             // Load ROM into CPU memory
             cpu.load_rom(rom.clone());
             
@@ -124,7 +128,7 @@ impl Emulator {
         let mut last_update = Instant::now();
         let mut last_cpu_step = Instant::now();
         let mut cpu_running = true;
-        let mut auto_mode = false; // Start in manual stepping mode
+        let mut auto_mode = false;
         let mut step_requested = false;
         
         'running: loop {
