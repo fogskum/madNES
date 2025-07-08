@@ -1,4 +1,6 @@
 use crate::cpu::cpu::Cpu;
+use crate::cpu::memory::Memory;
+use crate::rom::rom::Rom;
 
 use crate::emulator::options::EmulatorOptions;
 
@@ -13,6 +15,8 @@ use sdl2::ttf::{Sdl2TtfContext};
 use std::time::{Duration, Instant};
 
 pub struct Emulator {
+    #[allow(dead_code)]
+    options: EmulatorOptions,
     cpu: Cpu,
     main_canvas: Canvas<Window>,
     debug_canvas: Canvas<Window>,
@@ -27,8 +31,8 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(options: &EmulatorOptions) -> Result<Self, String> {
-        let cpu = Cpu::new();
+    pub fn new(options: EmulatorOptions) -> Result<Self, String> {
+        let mut cpu = Cpu::new();
 
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
@@ -73,7 +77,30 @@ impl Emulator {
 
         let event_pump = sdl_context.event_pump()?;
 
+        // Load ROM if provided
+        if !options.rom_path.is_empty() {
+            let rom_data = std::fs::read(&options.rom_path)
+                .map_err(|e| format!("Failed to read ROM file '{}': {}", options.rom_path, e))?;
+            
+            let rom = Rom::new(&rom_data)
+                .map_err(|e| format!("Failed to parse ROM file '{}': {}", options.rom_path, e))?;
+            
+            println!("Loaded ROM: {} PRG ROM, {} CHR ROM, Mapper: {}", 
+                     rom.prg_rom.len(), rom.chr_rom.len(), rom.mapper);
+            
+            // Load ROM into CPU memory
+            cpu.load_rom(rom.clone());
+            
+            // Set reset vector to start of PRG ROM
+            cpu.write_word(0xFFFC, 0x8000);
+            cpu.reset();
+            
+            // Disassemble ROM for debugging
+            cpu.disassemble(0x8000, 0x8000 + std::cmp::min(rom.prg_rom.len(), 0x100) as u16);
+        }
+
         Ok(Emulator {
+            options,
             cpu,
             main_canvas,
             debug_canvas,
@@ -83,7 +110,7 @@ impl Emulator {
             texture_creator,
             ttf_context,
             font_path: "assets/font.ttf".to_string(),
-            font_size: 12,
+            font_size: 12
         })
     }
 
@@ -92,8 +119,7 @@ impl Emulator {
         self.disassembly_lines.clear();
     }
 
-    pub fn run(&mut self, game_code: Vec<u8>) -> Result<(), String> {
-        self.cpu.load_program(game_code, 0x0600)?;
+    pub fn run(&mut self) -> Result<(), String> {
 
         let mut last_update = Instant::now();
         let mut last_cpu_step = Instant::now();

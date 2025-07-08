@@ -1,6 +1,7 @@
 use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
 use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
+use crate::rom::rom::Rom;
 
 #[allow(dead_code)]
 const PROGRAM_ADDRESS: u16 = 0x8000;
@@ -186,8 +187,17 @@ impl Cpu {
             ));
         }
         
-        // Load program into PRG ROM
-        self.memory.load_prg_rom(program.clone());
+        // Create a fake ROM from the program data for testing
+        let rom = Rom {
+            prg_rom: program.clone(),
+            chr_rom: vec![0; 8192], // 8KB CHR ROM
+            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mapper: 0, // NROM
+            prg_ram_size: 8192, // 8KB PRG RAM
+        };
+        
+        // Load ROM into memory
+        self.memory.load_prg_rom(rom);
         
         // Set reset vector to point to the program start
         self.write_word(0xFFFC, address);
@@ -196,6 +206,10 @@ impl Cpu {
         // Disassemble for debugging
         self.disassemble(address, address + program.len() as u16);
         Ok(())
+    }
+
+    pub fn load_rom(&mut self, rom: Rom) {
+        self.memory.load_prg_rom(rom);
     }
 
     pub fn run(&mut self, show_disassembly: bool) {
@@ -883,7 +897,21 @@ mod tests {
     #[test]
     fn test_reset() {
         let mut cpu = Cpu::new();
-        cpu.write_word(0xFFFC, 0x4242);
+        
+        // Create a ROM with a reset vector at 0x4242
+        let mut rom_data = vec![0; 0x8000]; // 32KB ROM
+        rom_data[0x7FFC] = 0x42; // Low byte of reset vector at 0xFFFC
+        rom_data[0x7FFD] = 0x42; // High byte of reset vector at 0xFFFD
+        
+        let rom = Rom {
+            prg_rom: rom_data,
+            chr_rom: vec![0; 8192],
+            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mapper: 0,
+            prg_ram_size: 8192,
+        };
+        
+        cpu.memory.load_prg_rom(rom);
         cpu.reset();
         assert_eq!(cpu.a, 0);
         assert_eq!(cpu.x, 0);
@@ -1313,7 +1341,13 @@ mod tests {
         let mut cpu = Cpu::new();
         
         // Load a small ROM
-        let rom_data = vec![0x01, 0x02, 0x03, 0x04];
+        let rom_data = Rom {
+            prg_rom: vec![0x01, 0x02, 0x03, 0x04],
+            chr_rom: vec![0; 8192],
+            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mapper: 0,
+            prg_ram_size: 8192,
+        };
         cpu.memory.load_prg_rom(rom_data);
         
         // Test reading from PRG ROM
@@ -1323,7 +1357,13 @@ mod tests {
         assert_eq!(cpu.read_byte(0x8003), 0x04);
         
         // Test 16KB ROM mirroring (if ROM is exactly 16KB, it mirrors in upper 16KB)
-        let rom_16kb = vec![0xAA; 0x4000]; // 16KB ROM
+        let rom_16kb = Rom {
+            prg_rom: vec![0xAA; 0x4000], // 16KB ROM
+            chr_rom: vec![0; 8192],
+            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mapper: 0,
+            prg_ram_size: 8192,
+        };
         cpu.memory.load_prg_rom(rom_16kb);
         assert_eq!(cpu.read_byte(0x8000), 0xAA); // First 16KB
         assert_eq!(cpu.read_byte(0xC000), 0xAA); // Mirrored in second 16KB

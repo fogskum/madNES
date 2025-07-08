@@ -25,6 +25,12 @@ A Nintendo Entertainment System (NES) emulator written in Rust, featuring accura
   - Stack: `PHA`, `PLA`, `PHP`
   - System: `BRK`, `RTI`, `NOP`
 
+#### ROM Loading & Cartridge Support
+- **NES ROM Format Support**: Loads `.nes` files with proper header parsing
+- **Mapper Support**: Currently supports NROM (Mapper 0) with plans for more
+- **Memory Mapping**: Automatic PRG ROM mapping to CPU address space
+- **ROM Validation**: Comprehensive error handling for invalid or corrupted ROMs
+
 #### Addressing Modes
 - Immediate (`#$nn`)
 - Zero Page (`$nn`)
@@ -199,22 +205,56 @@ cargo test
 - **Error Handling**: Proper `Result` types throughout
 - **Documentation**: Inline comments and examples
 
+## Running the Emulator
+
+To run the emulator, you need to provide a NES ROM file:
+
+```bash
+# Build the project
+cargo build --release
+
+# Run with a ROM file
+cargo run --release -- --rom-path game.nes
+
+# Or run the binary directly
+./target/release/madnes --rom-path game.nes
+```
+
+### Controls
+- **N**: Step to next instruction (manual mode)
+- **Space**: Toggle between auto and manual execution mode
+- **R**: Reset the emulator
+- **I**: Trigger CPU interrupt
+- **Escape**: Exit emulator
+
+### Creating Test ROMs
+You can create simple test ROMs using the included Python script:
+
+```bash
+python3 create_test_rom.py
+cargo run -- --rom-path test.nes
+```
+
 ## Example Usage
 
 ```rust
 use madnes::cpu::cpu::Cpu;
 use madnes::cpu::memory::Memory;
+use madnes::rom::rom::Rom;
 
-// Create CPU and load program
+// Create CPU and load ROM
 let mut cpu = Cpu::new();
-let program = vec![0xA9, 0x42, 0x00]; // LDA #$42, BRK
-cpu.load_program(program, 0x8000).unwrap();
+let rom_data = std::fs::read("game.nes").unwrap();
+let rom = Rom::new(&rom_data).unwrap();
+cpu.load_rom(rom);
 
-// Execute program
-cpu.run(false);
+// Reset to start execution
+cpu.reset();
 
-// Check result
-assert_eq!(cpu.get_a(), 0x42);
+// Execute instructions
+while cpu.step() {
+    // CPU continues execution
+}
 ```
 
 ## Roadmap

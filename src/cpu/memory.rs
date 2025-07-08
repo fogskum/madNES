@@ -51,8 +51,8 @@ impl NesMemory {
         }
     }
     
-    pub fn load_prg_rom(&mut self, data: Vec<u8>) {
-        self.rom = Some(Rom::new(&data).unwrap());
+    pub fn load_prg_rom(&mut self, rom: Rom) {
+        self.rom = Some(rom);
     }
     
     /// Get the mirrored address for internal RAM

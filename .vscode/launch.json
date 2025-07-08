@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["--rom-path ~/source/madNES/assets/nestest.nes"],
             "cwd": "${workspaceFolder}"
         },
         {
