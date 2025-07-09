@@ -1,7 +1,6 @@
 use crate::cpu::cpu::Cpu;
 use crate::cpu::memory::Memory;
 use crate::rom::rom::Rom;
-
 use crate::emulator::options::EmulatorOptions;
 
 use sdl2::event::Event;
@@ -89,8 +88,7 @@ impl Emulator {
                      rom.prg_rom.len(), rom.chr_rom.len(), rom.mapper);
             
             // Initialize CPU log file
-            use crate::cpu::cpu::Cpu;
-            Cpu::init_log();
+            Cpu::init_log().map_err(|e| format!("Failed to initialize CPU log: {}", e))?;
             
             // Load ROM into CPU memory
             cpu.load_rom(rom.clone());
@@ -100,7 +98,9 @@ impl Emulator {
             cpu.reset();
             
             // Disassemble ROM for debugging
-            cpu.disassemble(0x8000, 0x8000 + std::cmp::min(rom.prg_rom.len(), 0x100) as u16);
+            if options.debug {
+                cpu.disassemble(0x8000, 0x8000 + std::cmp::min(rom.prg_rom.len(), 0x100) as u16);
+            }
         }
 
         Ok(Emulator {
@@ -319,7 +319,6 @@ impl Emulator {
         self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));
         self.debug_canvas.fill_rect(Rect::new(5, 190, 590, 2))?;
         
-        // OPTIMIZATION: Render all text in a single batch (loads font only once!)
         self.render_text_batch(&text_batch)?;
         
         self.debug_canvas.present();

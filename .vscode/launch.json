@@ -7,34 +7,52 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'madness'",
+            "name": "Debug madNES with nestest.nes",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=madness",
-                    "--package=madness"
+                    "--bin=madnes",
+                    "--package=madnes"
                 ],
                 "filter": {
-                    "name": "madness",
+                    "name": "madnes",
                     "kind": "bin"
                 }
             },
-            "args": ["--rom-path ~/source/madNES/assets/nestest.nes"],
+            "args": ["--debug"],
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'madness'",
+            "name": "Debug madNES with custom ROM",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=madnes",
+                    "--package=madnes"
+                ],
+                "filter": {
+                    "name": "madnes",
+                    "kind": "bin"
+                }
+            },
+            "args": ["--rom-path", "test_log.nes"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in madNES",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=madness",
-                    "--package=madness"
+                    "--bin=madnes",
+                    "--package=madnes"
                 ],
                 "filter": {
-                    "name": "madness",
+                    "name": "madnes",
                     "kind": "bin"
                 }
             },

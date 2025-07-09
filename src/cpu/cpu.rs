@@ -993,12 +993,10 @@ impl Cpu {
         }
     }
 
-    /// Initialize the log file (clear previous content)
-    pub fn init_log() {
-        if let Ok(mut file) = std::fs::File::create("madnes.log") {
-            writeln!(file, "madNES CPU Log - nestest.log format").ok();
-            writeln!(file, "====================================").ok();
-        }
+    // Initialize the log file (clear previous content)
+    pub fn init_log() -> Result<(), std::io::Error> {
+        std::fs::File::create("madnes.log")?;
+        Ok(())
     }
 }
 
