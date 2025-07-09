@@ -1,4 +1,4 @@
-use crate::rom::rom::Rom;
+use crate::rom::Rom;
 
 pub trait Memory {
     fn read_byte(&self, address: u16) -> u8;

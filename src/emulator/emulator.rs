@@ -1,6 +1,5 @@
-use crate::cpu::cpu::Cpu;
-use crate::cpu::memory::Memory;
-use crate::rom::rom::Rom;
+use crate::cpu::{Cpu, Memory};
+use crate::rom::Rom;
 use crate::emulator::options::EmulatorOptions;
 use crate::error::{EmulatorError, SdlError, IoError};
 

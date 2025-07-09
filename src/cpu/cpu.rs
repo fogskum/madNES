@@ -1,7 +1,7 @@
 use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
 use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
-use crate::rom::rom::Rom;
+use crate::rom::Rom;
 use crate::error::{IoError, EmulatorError, CpuError, CpuResult};
 use std::fs::OpenOptions;
 use std::io::Write;

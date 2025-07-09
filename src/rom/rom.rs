@@ -1,4 +1,5 @@
 use crate::error::{RomError, RomResult};
+use crate::rom::ines::InesHeader;
 
 #[derive(Debug, Clone)]
 pub enum MirrorMode {
@@ -17,55 +18,13 @@ pub struct Rom {
 }
 
 impl Rom {
-    /// Load a ROM from NES file format
-    /// NES file format:
-    /// Bytes 0-3: "NES\x1A" header
-    /// Byte 4: PRG ROM size in 16KB units
-    /// Byte 5: CHR ROM size in 8KB units
-    /// Byte 6: Flags 6 - Mapper, mirroring, battery, trainer
-    /// Byte 7: Flags 7 - Mapper, VS/Playchoice, NES 2.0
-    /// Byte 8: PRG RAM size (rarely used)
-    /// Byte 9: TV system (rarely used)
-    /// Bytes 10-15: Unused padding
-    /// Trainer (512 bytes, if present)
-    /// PRG ROM data
-    /// CHR ROM data
+    /// Load a ROM from NES file format using iNES header
     pub fn new(rom_data: &[u8]) -> RomResult<Rom> {
-        if rom_data.len() < 16 {
-            return Err(RomError::FileTooSmall { 
-                expected: 16, 
-                actual: rom_data.len() 
-            });
-        }
+        let header = InesHeader::parse(rom_data)?;
         
-        // Check NES header
-        if &rom_data[0..4] != b"NES\x1A" {
-            return Err(RomError::InvalidHeader(
-                "Missing or invalid NES header signature".to_string()
-            ));
-        }
-
-        let prg_rom_size = rom_data[4] as usize * 16 * 1024; // 16KB units
-        let chr_rom_size = rom_data[5] as usize * 8 * 1024;  // 8KB units
-        
-        let flags6 = rom_data[6];
-        let flags7 = rom_data[7];
-        
-        // Extract mirroring mode
-        let mirror_mode = if flags6 & 0x08 != 0 {
-            MirrorMode::FourScreen
-        } else if flags6 & 0x01 != 0 {
-            MirrorMode::Vertical
-        } else {
-            MirrorMode::Horizontal
-        };
-        
-        // Extract mapper number
-        let mapper = (flags7 & 0xF0) | (flags6 >> 4);
-        
-        // Check for trainer (512 bytes before PRG ROM)
-        let has_trainer = flags6 & 0x04 != 0;
-        let trainer_size = if has_trainer { 512 } else { 0 };
+        let prg_rom_size = header.get_prg_rom_size_bytes();
+        let chr_rom_size = header.get_chr_rom_size_bytes();
+        let trainer_size = header.get_trainer_size();
         
         // Calculate data offsets
         let prg_rom_start = 16 + trainer_size;
@@ -96,15 +55,12 @@ impl Rom {
             vec![0; 8 * 1024] // 8KB CHR RAM
         };
         
-        // PRG RAM size (usually 8KB if not specified)
-        let prg_ram_size = if rom_data[8] == 0 { 8 * 1024 } else { rom_data[8] as usize * 8 * 1024 };
-        
         Ok(Rom {
             prg_rom,
             chr_rom,
-            mirror_mode,
-            mapper,
-            prg_ram_size,
+            mirror_mode: header.get_mirror_mode(),
+            mapper: header.get_mapper_number(),
+            prg_ram_size: header.get_prg_ram_size_bytes(),
         })
     }
     

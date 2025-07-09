@@ -1,4 +1,11 @@
 pub mod cpu;
+pub mod ppu;
+pub mod apu;
 pub mod emulator;
 pub mod rom;
+pub mod mappers;
+pub mod input;
+pub mod video;
+pub mod audio;
+pub mod utils;
 pub mod error;
