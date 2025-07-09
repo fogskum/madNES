@@ -2,6 +2,7 @@ use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
 use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
 use crate::rom::rom::Rom;
+use crate::error::{IoError, EmulatorError, CpuError, CpuResult};
 use std::fs::OpenOptions;
 use std::io::Write;
 
@@ -222,20 +223,28 @@ impl Cpu {
                 self.disassemble(self.pc, upper_address);
             }
 
-            if !self.step() {
-                break;
+            match self.step() {
+                Ok(should_continue) => {
+                    if !should_continue {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("CPU error: {}", e);
+                    break;
+                }
             }
         }
     }
 
-    pub fn step(&mut self) -> bool {
+    pub fn step(&mut self) -> CpuResult<bool> {
         // Execute one instruction and return true if should continue
         let opcode = self.read_byte(self.pc);
 
         // get instruction metadata for opcode
         let instruction = INSTRUCTIONS
             .get(&opcode)
-            .unwrap_or_else(|| panic!("Unknown opcode: {:#X} at PC: {:#X}", opcode, self.pc));
+            .ok_or_else(|| CpuError::UnknownOpcode { opcode, pc: self.pc })?;
 
         // Collect instruction bytes for logging
         let mut instruction_bytes = vec![opcode];
@@ -252,12 +261,12 @@ impl Cpu {
         self.pc += 1;
 
         // get operand address for instruction
-        let operand_address = self.get_operand_address(instruction);
+        let operand_address = self.get_operand_address(instruction)?;
 
         match instruction.opcode {
             0x00 => {
                 self.brk();
-                return false; // Stop execution on BRK
+                return Ok(false); // Stop execution on BRK
             }
             // LDA instructions
             0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
@@ -438,42 +447,42 @@ impl Cpu {
         self.instruction_count += 1;
         self.cycles += instruction.cycles as u64;
 
-        true
+        Ok(true)
     }
 
-    fn get_operand_address(&self, instruction: &Instruction) -> u16 {
+    fn get_operand_address(&self, instruction: &Instruction) -> CpuResult<u16> {
         match instruction.addressing_mode {
-            AddressingMode::Immediate => self.pc,
-            AddressingMode::ZeroPage => self.read_byte(self.pc) as u16,
+            AddressingMode::Immediate => Ok(self.pc),
+            AddressingMode::ZeroPage => Ok(self.read_byte(self.pc) as u16),
             AddressingMode::ZeroPageX => {
                 let addr = self.read_byte(self.pc);
-                addr.wrapping_add(self.x) as u16
+                Ok(addr.wrapping_add(self.x) as u16)
             }
             AddressingMode::ZeroPageY => {
                 let addr = self.read_byte(self.pc);
-                addr.wrapping_add(self.y) as u16
+                Ok(addr.wrapping_add(self.y) as u16)
             }
-            AddressingMode::Absolute => self.read_word(self.pc),
-            AddressingMode::AbsoluteX => self.read_word(self.pc).wrapping_add(self.x as u16),
-            AddressingMode::AbsoluteY => self.read_word(self.pc).wrapping_add(self.y as u16),
+            AddressingMode::Absolute => Ok(self.read_word(self.pc)),
+            AddressingMode::AbsoluteX => Ok(self.read_word(self.pc).wrapping_add(self.x as u16)),
+            AddressingMode::AbsoluteY => Ok(self.read_word(self.pc).wrapping_add(self.y as u16)),
             AddressingMode::IndirectX => {
                 let base = self.read_byte(self.pc);
                 let ptr = base.wrapping_add(self.x);
                 let lo = self.read_byte(ptr as u16) as u16;
                 let hi = self.read_byte(ptr.wrapping_add(1) as u16) as u16;
-                (hi << 8) | lo
+                Ok((hi << 8) | lo)
             }
             AddressingMode::IndirectY => {
                 let base = self.read_byte(self.pc);
                 let lo = self.read_byte(base as u16) as u16;
                 let hi = self.read_byte(base.wrapping_add(1) as u16) as u16;
-                ((hi << 8) | lo).wrapping_add(self.y as u16)
+                Ok(((hi << 8) | lo).wrapping_add(self.y as u16))
             }
-            AddressingMode::Implied => 0, // Implied has no operand address
-            AddressingMode::None => panic!(
-                "Addressing mode {} not supported!",
-                instruction.addressing_mode
-            ),
+            AddressingMode::Implied => Ok(0), // Implied has no operand address
+            AddressingMode::None => Err(CpuError::InvalidInstruction {
+                address: self.pc,
+                reason: format!("Addressing mode {} not supported!", instruction.addressing_mode),
+            }),
         }
     }
 
@@ -739,9 +748,24 @@ impl Cpu {
 
     fn branch(&mut self, condition: bool) {
         if condition {
+            let old_pc = self.pc;
             let offset = self.read_byte(self.pc) as i8;
             self.pc = self.pc.wrapping_add(offset as u16);
+
+            // add cycles for branch instruction
+            self.cycles += 1;
+            
+            // Check for page crossing
+            if self.is_page_crossed(old_pc, self.pc) {
+                // Extra cycle for page crossing
+                self.cycles += 1;
+            }
         }
+    }
+
+    // check if two addresses are on different pages
+    fn is_page_crossed(&self, addr1: u16, addr2: u16) -> bool {
+        (addr1 & 0xFF00) != (addr2 & 0xFF00)
     }
 
     // Core disassembly logic - formats a single instruction at given address
@@ -994,8 +1018,9 @@ impl Cpu {
     }
 
     // Initialize the log file (clear previous content)
-    pub fn init_log() -> Result<(), std::io::Error> {
-        std::fs::File::create("madnes.log")?;
+    pub fn init_log() -> Result<(), EmulatorError> {
+        std::fs::File::create("madnes.log")
+            .map_err(|e| EmulatorError::Io(IoError::WriteError(format!("Failed to create log file: {}", e))))?;
         Ok(())
     }
 }

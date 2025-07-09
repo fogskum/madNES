@@ -20,8 +20,18 @@ fn main() {
     }
     
     println!("Initializing emulator...");
-    let mut emulator = Emulator::new(args).expect("Failed to initialize emulator");
-    emulator.run().expect("Failed to run emulator");
+    let mut emulator = match Emulator::new(args) {
+        Ok(emulator) => emulator,
+        Err(e) => {
+            eprintln!("Failed to initialize emulator: {}", e);
+            std::process::exit(1);
+        }
+    };
+    
+    if let Err(e) = emulator.run() {
+        eprintln!("Failed to run emulator: {}", e);
+        std::process::exit(1);
+    }
 }
 
 fn display_banner() {

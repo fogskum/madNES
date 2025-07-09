@@ -1,3 +1,5 @@
+use crate::error::{RomError, RomResult};
+
 #[derive(Debug, Clone)]
 pub enum MirrorMode {
     Horizontal,
@@ -28,14 +30,19 @@ impl Rom {
     /// Trainer (512 bytes, if present)
     /// PRG ROM data
     /// CHR ROM data
-    pub fn new(rom_data: &[u8]) -> Result<Rom, String> {
+    pub fn new(rom_data: &[u8]) -> RomResult<Rom> {
         if rom_data.len() < 16 {
-            return Err("ROM file too small".to_string());
+            return Err(RomError::FileTooSmall { 
+                expected: 16, 
+                actual: rom_data.len() 
+            });
         }
         
         // Check NES header
         if &rom_data[0..4] != b"NES\x1A" {
-            return Err("Invalid NES ROM header".to_string());
+            return Err(RomError::InvalidHeader(
+                "Missing or invalid NES header signature".to_string()
+            ));
         }
 
         let prg_rom_size = rom_data[4] as usize * 16 * 1024; // 16KB units
@@ -67,11 +74,15 @@ impl Rom {
         // Validate file size
         let expected_size = chr_rom_start + chr_rom_size;
         if rom_data.len() < expected_size {
-            return Err(format!(
-                "ROM file truncated: expected {} bytes, got {}",
-                expected_size,
-                rom_data.len()
-            ));
+            return Err(RomError::FileTooSmall {
+                expected: expected_size,
+                actual: rom_data.len(),
+            });
+        }
+        
+        // Validate PRG ROM size
+        if prg_rom_size == 0 {
+            return Err(RomError::MissingData("PRG ROM".to_string()));
         }
         
         // Extract PRG ROM
@@ -98,9 +109,9 @@ impl Rom {
     }
     
     /// Load ROM from file path
-    pub fn from_file(path: &str) -> Result<Rom, String> {
+    pub fn from_file(path: &str) -> RomResult<Rom> {
         let rom_data = std::fs::read(path)
-            .map_err(|e| format!("Failed to read ROM file '{}': {}", path, e))?;
+            .map_err(|e| RomError::Io(format!("Failed to read ROM file '{}': {}", path, e)))?;
         Self::new(&rom_data)
     }
     

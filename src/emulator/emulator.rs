@@ -2,6 +2,7 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::memory::Memory;
 use crate::rom::rom::Rom;
 use crate::emulator::options::EmulatorOptions;
+use crate::error::{EmulatorError, SdlError, IoError};
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -30,26 +31,29 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(options: EmulatorOptions) -> Result<Self, String> {
+    pub fn new(options: EmulatorOptions) -> Result<Self, EmulatorError> {
         let mut cpu = Cpu::new();
 
-        let sdl_context = sdl2::init()?;
-        let video_subsystem = sdl_context.video()?;
+        let sdl_context = sdl2::init()
+            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
+        let video_subsystem = sdl_context.video()
+            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
 
         // Initialize TTF
-        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+        let ttf_context = sdl2::ttf::init()
+            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
         
         // Create main emulator window
         let main_window = video_subsystem
             .window("madNES - Main", options.width, options.height)
             .position_centered()
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| EmulatorError::Sdl(SdlError::WindowCreationFailed(e.to_string())))?;
 
         let mut main_canvas = main_window
             .into_canvas()
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e.to_string())))?;
 
         main_canvas.set_draw_color(Color::RGB(0, 255, 0));
         main_canvas.clear();
@@ -60,12 +64,12 @@ impl Emulator {
             .window("madNES - Debug", 600, 800)
             .position(50, 50)
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| EmulatorError::Sdl(SdlError::WindowCreationFailed(e.to_string())))?;
 
         let mut debug_canvas = debug_window
             .into_canvas()
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e.to_string())))?;
 
         // Create texture creator for text rendering
         let texture_creator = debug_canvas.texture_creator();
@@ -74,21 +78,22 @@ impl Emulator {
         debug_canvas.clear();
         debug_canvas.present();
 
-        let event_pump = sdl_context.event_pump()?;
+        let event_pump = sdl_context.event_pump()
+            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
 
         // Load ROM if provided
         if !options.rom.is_empty() {
             let rom_data = std::fs::read(&options.rom)
-                .map_err(|e| format!("Failed to read ROM file '{}': {}", options.rom, e))?;
+                .map_err(|e| EmulatorError::Io(IoError::ReadError(format!("Failed to read ROM file '{}': {}", options.rom, e))))?;
             
             let rom = Rom::new(&rom_data)
-                .map_err(|e| format!("Failed to parse ROM file '{}': {}", options.rom, e))?;
+                .map_err(|e| EmulatorError::Rom(e))?;
             
             println!("Loaded ROM: {} PRG ROM, {} CHR ROM, Mapper: {}", 
                      rom.prg_rom.len(), rom.chr_rom.len(), rom.mapper);
             
             // Initialize CPU log file
-            Cpu::init_log().map_err(|e| format!("Failed to initialize CPU log: {}", e))?;
+            Cpu::init_log()?;
             
             // Load ROM into CPU memory
             cpu.load_rom(rom.clone());
@@ -123,7 +128,7 @@ impl Emulator {
         self.disassembly_lines.clear();
     }
 
-    pub fn run(&mut self) -> Result<(), String> {
+    pub fn run(&mut self) -> Result<(), EmulatorError> {
 
         let mut last_update = Instant::now();
         let mut last_cpu_step = Instant::now();
@@ -193,7 +198,15 @@ impl Emulator {
                 };
 
                 if should_step {
-                    cpu_running = self.cpu.step();
+                    match self.cpu.step() {
+                        Ok(should_continue) => {
+                            cpu_running = should_continue;
+                        }
+                        Err(e) => {
+                            eprintln!("CPU error: {}", e);
+                            cpu_running = false;
+                        }
+                    }
                     last_cpu_step = now;
                     step_requested = false; // Reset the step request
                 }
@@ -212,7 +225,7 @@ impl Emulator {
         Ok(())
     }
 
-    fn render(&mut self, auto_mode: bool) -> Result<(), String> {
+    fn render(&mut self, auto_mode: bool) -> Result<(), EmulatorError> {
         // Render main window with the rotating square
         self.main_canvas.set_draw_color(Color::RGB(0, 255, 0));
         self.main_canvas.clear();
@@ -227,7 +240,8 @@ impl Emulator {
         let y = center_y + (radius * self.rotation.sin()) as i32 - 25;
         
         self.main_canvas.set_draw_color(Color::RGB(255, 0, 0));
-        self.main_canvas.fill_rect(Rect::new(x, y, 50, 50))?;
+        self.main_canvas.fill_rect(Rect::new(x, y, 50, 50))
+            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e)))?;
         self.main_canvas.present();
 
         // Render debug window with CPU status and disassembly info
@@ -308,7 +322,8 @@ impl Emulator {
             // Highlight current instruction (the line with current PC)
             if should_highlight {
                 self.debug_canvas.set_draw_color(Color::RGB(40, 40, 0));
-                self.debug_canvas.fill_rect(Rect::new(5, y - 2, 590, 16))?;
+                self.debug_canvas.fill_rect(Rect::new(5, y - 2, 590, 16))
+                    .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e)))?;
                 text_batch.push((line.clone(), 10, y, Color::RGB(255, 255, 0)));
             } else {
                 text_batch.push((line.clone(), 10, y, Color::RGB(0, 255, 0)));
@@ -317,7 +332,8 @@ impl Emulator {
         
         // Add separator
         self.debug_canvas.set_draw_color(Color::RGB(100, 100, 100));
-        self.debug_canvas.fill_rect(Rect::new(5, 190, 590, 2))?;
+        self.debug_canvas.fill_rect(Rect::new(5, 190, 590, 2))
+            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e)))?;
         
         self.render_text_batch(&text_batch)?;
         
@@ -326,25 +342,26 @@ impl Emulator {
     }
 
     // Optimized batch text rendering - renders multiple lines with a single font load
-    fn render_text_batch(&mut self, text_items: &[(String, i32, i32, Color)]) -> Result<(), String> {
+    fn render_text_batch(&mut self, text_items: &[(String, i32, i32, Color)]) -> Result<(), EmulatorError> {
         if text_items.is_empty() {
             return Ok(());
         }
 
         // Load font once for the entire batch
-        let font = self.ttf_context.load_font(&self.font_path, self.font_size).map_err(|e| e.to_string())?;
+        let font = self.ttf_context.load_font(&self.font_path, self.font_size)
+            .map_err(|e| EmulatorError::Sdl(SdlError::FontLoadingFailed(e.to_string())))?;
         
         for (text, x, y, color) in text_items {
             // Create a surface from the text
             let surface = font
                 .render(text)
                 .blended(*color)
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| EmulatorError::Sdl(SdlError::FontLoadingFailed(e.to_string())))?;
             
             // Create a texture from the surface
             let texture = self.texture_creator
                 .create_texture_from_surface(&surface)
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| EmulatorError::Sdl(SdlError::TextureCreationFailed(e.to_string())))?;
             
             // Get the text dimensions
             let text_width = surface.width();
@@ -352,7 +369,8 @@ impl Emulator {
             
             // Render the texture to the canvas
             let dst_rect = Rect::new(*x, *y, text_width, text_height);
-            self.debug_canvas.copy(&texture, None, dst_rect)?;
+            self.debug_canvas.copy(&texture, None, dst_rect)
+                .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e.to_string())))?;
         }
         
         Ok(())
