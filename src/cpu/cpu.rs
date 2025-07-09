@@ -3,6 +3,7 @@ use crate::cpu::flags::StatusFlag;
 use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
 use crate::rom::Rom;
 use crate::error::{IoError, EmulatorError, CpuError, CpuResult};
+use crate::utils::bit_utils;
 use std::fs::OpenOptions;
 use std::io::Write;
 
@@ -756,16 +757,11 @@ impl Cpu {
             self.cycles += 1;
             
             // Check for page crossing
-            if self.is_page_crossed(old_pc, self.pc) {
+            if bit_utils::page_crossed(old_pc, self.pc) {
                 // Extra cycle for page crossing
                 self.cycles += 1;
             }
         }
-    }
-
-    // check if two addresses are on different pages
-    fn is_page_crossed(&self, addr1: u16, addr2: u16) -> bool {
-        (addr1 & 0xFF00) != (addr2 & 0xFF00)
     }
 
     // Core disassembly logic - formats a single instruction at given address

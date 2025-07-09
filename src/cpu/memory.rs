@@ -1,4 +1,5 @@
 use crate::rom::Rom;
+use crate::utils::error_helpers::{mirror_address, mirror_rom_16k};
 
 pub trait Memory {
     fn read_byte(&self, address: u16) -> u8;
@@ -57,12 +58,12 @@ impl NesMemory {
     
     /// Get the mirrored address for internal RAM
     fn mirror_internal_ram(&self, address: u16) -> usize {
-        (address & 0x07FF) as usize
+        mirror_address(address, 0x07FF) as usize
     }
     
     /// Get the mirrored address for PPU registers
     fn mirror_ppu_registers(&self, address: u16) -> usize {
-        (address & 0x0007) as usize
+        mirror_address(address, 0x0007) as usize
     }
 }
 
@@ -111,9 +112,10 @@ impl Memory for NesMemory {
                         rom.prg_rom[offset]
                     } else {
                         // Handle case where ROM is smaller than address space
-                        // Mirror the ROM if it's 16KB (typical for small games)
-                        if rom.prg_rom.len() == 0x4000 && offset >= 0x4000 {
-                            rom.prg_rom[offset - 0x4000]
+                        // Use helper function for 16KB ROM mirroring
+                        let mirrored_offset = mirror_rom_16k(address, rom.prg_rom.len()) as usize;
+                        if mirrored_offset < rom.prg_rom.len() {
+                            rom.prg_rom[mirrored_offset]
                         } else {
                             0
                         }

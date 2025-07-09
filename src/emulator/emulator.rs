@@ -2,6 +2,7 @@ use crate::cpu::{Cpu, Memory};
 use crate::rom::Rom;
 use crate::emulator::options::EmulatorOptions;
 use crate::error::{EmulatorError, SdlError, IoError};
+use crate::utils::error_helpers::sdl_error_to_emulator_error;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -34,25 +35,25 @@ impl Emulator {
         let mut cpu = Cpu::new();
 
         let sdl_context = sdl2::init()
-            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "init"))?;
         let video_subsystem = sdl_context.video()
-            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "init"))?;
 
         // Initialize TTF
         let ttf_context = sdl2::ttf::init()
-            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "init"))?;
         
         // Create main emulator window
         let main_window = video_subsystem
             .window("madNES - Main", options.width, options.height)
             .position_centered()
             .build()
-            .map_err(|e| EmulatorError::Sdl(SdlError::WindowCreationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "window"))?;
 
         let mut main_canvas = main_window
             .into_canvas()
             .build()
-            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "renderer"))?;
 
         main_canvas.set_draw_color(Color::RGB(0, 255, 0));
         main_canvas.clear();
@@ -63,12 +64,12 @@ impl Emulator {
             .window("madNES - Debug", 600, 800)
             .position(50, 50)
             .build()
-            .map_err(|e| EmulatorError::Sdl(SdlError::WindowCreationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "window"))?;
 
         let mut debug_canvas = debug_window
             .into_canvas()
             .build()
-            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "renderer"))?;
 
         // Create texture creator for text rendering
         let texture_creator = debug_canvas.texture_creator();
@@ -78,7 +79,7 @@ impl Emulator {
         debug_canvas.present();
 
         let event_pump = sdl_context.event_pump()
-            .map_err(|e| EmulatorError::Sdl(SdlError::InitializationFailed(e.to_string())))?;
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "init"))?;
 
         // Load ROM if provided
         if !options.rom.is_empty() {

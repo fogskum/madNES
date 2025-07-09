@@ -89,6 +89,8 @@ pub enum SdlError {
     FontLoadingFailed(String),
     /// Audio initialization failed
     AudioInitializationFailed(String),
+    /// Other SDL error
+    Other(String),
 }
 
 #[derive(Debug, Clone)]
@@ -210,6 +212,9 @@ impl fmt::Display for SdlError {
             }
             SdlError::AudioInitializationFailed(reason) => {
                 write!(f, "Audio initialization failed: {}", reason)
+            }
+            SdlError::Other(reason) => {
+                write!(f, "SDL error: {}", reason)
             }
         }
     }

@@ -1,6 +1,7 @@
 pub mod mapper;
 pub mod mapper000;
 pub mod mapper001;
+pub mod macros;
 
 pub use mapper::Mapper;
 pub use mapper000::Mapper000;

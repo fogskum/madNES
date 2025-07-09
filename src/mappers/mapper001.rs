@@ -1,6 +1,7 @@
 use crate::mappers::mapper::Mapper;
 use crate::rom::MirrorMode;
 use crate::error::MemoryResult;
+use crate::mappers::macros::{impl_no_irq_mapper, impl_chr_access, impl_prg_mirror};
 
 /// Mapper 001 - MMC1 (SxROM)
 pub struct Mapper001 {
@@ -35,6 +36,8 @@ impl Mapper001 {
             prg_ram_enabled: true,
         }
     }
+    
+    impl_prg_mirror!();
     
     fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         if (value & 0x80) != 0 {
@@ -186,29 +189,22 @@ impl Mapper for Mapper001 {
     fn map_chr_write(&mut self, address: u16, _value: u8) -> MemoryResult<Option<u32>> {
         match address {
             0x0000..=0x1FFF => {
-                if self.chr_banks == 0 {
-                    // CHR RAM - allow writes
-                    let chr_mode = (self.control_register >> 4) & 0x01;
-                    
-                    if chr_mode == 0 {
-                        // 8KB mode
-                        let bank = (self.chr_bank_0 & 0x1E) >> 1;
-                        let addr = address + (bank as u16 * 0x2000);
-                        Ok(Some(addr as u32))
-                    } else {
-                        // 4KB mode
-                        if address < 0x1000 {
-                            let addr = address + (self.chr_bank_0 as u16 * 0x1000);
-                            Ok(Some(addr as u32))
-                        } else {
-                            let addr = (address - 0x1000) + (self.chr_bank_1 as u16 * 0x1000);
-                            Ok(Some(addr as u32))
-                        }
-                    }
+                let chr_mode = (self.control_register >> 4) & 0x01;
+                
+                let mapped_addr = if chr_mode == 0 {
+                    // 8KB mode
+                    let bank = (self.chr_bank_0 & 0x1E) >> 1;
+                    address + (bank as u16 * 0x2000)
                 } else {
-                    // CHR ROM - read-only
-                    Ok(None)
-                }
+                    // 4KB mode
+                    if address < 0x1000 {
+                        address + (self.chr_bank_0 as u16 * 0x1000)
+                    } else {
+                        (address - 0x1000) + (self.chr_bank_1 as u16 * 0x1000)
+                    }
+                };
+                
+                self.chr_write_common(address, mapped_addr as u32)
             }
             _ => Ok(None),
         }
@@ -228,16 +224,18 @@ impl Mapper for Mapper001 {
         self.prg_ram_enabled = true;
         self.mirror_mode = MirrorMode::Horizontal;
     }
-    
-    fn irq_state(&self) -> bool {
-        false
+     fn irq_state(&self) -> bool {
+        self.irq_state()
     }
-    
+
     fn irq_clear(&mut self) {
-        // MMC1 doesn't generate IRQs
+        self.irq_clear()
     }
-    
+
     fn scanline(&mut self) {
-        // MMC1 doesn't use scanline counter
+        self.scanline()
     }
 }
+
+impl_no_irq_mapper!(Mapper001);
+impl_chr_access!(Mapper001, chr_banks);
