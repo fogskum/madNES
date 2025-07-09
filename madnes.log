@@ -1,0 +1,8 @@
+C004  78       SEI                              A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+C005  D8       CLD                              A:00 X:00 Y:00 P:24 SP:FD CYC:  2
+C006  A2 FF    LDX #$FF                         A:00 X:00 Y:00 P:24 SP:FD CYC:  4
+C008  9A       TXS                              A:00 X:FF Y:00 P:A4 SP:FD CYC:  6
+C009  AD 02 20 LDA $2002                        A:00 X:FF Y:00 P:A4 SP:FD CYC:  8
+C00C  10 FB    BPL                              A:00 X:FF Y:00 P:26 SP:FD CYC: 12
+C009  AD 02 20 LDA $2002                        A:00 X:FF Y:00 P:26 SP:FD CYC: 14
+C00C  10 FB    BPL                              A:00 X:FF Y:00 P:26 SP:FD CYC: 18

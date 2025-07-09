@@ -77,12 +77,12 @@ impl Emulator {
         let event_pump = sdl_context.event_pump()?;
 
         // Load ROM if provided
-        if !options.rom_path.is_empty() {
-            let rom_data = std::fs::read(&options.rom_path)
-                .map_err(|e| format!("Failed to read ROM file '{}': {}", options.rom_path, e))?;
+        if !options.rom.is_empty() {
+            let rom_data = std::fs::read(&options.rom)
+                .map_err(|e| format!("Failed to read ROM file '{}': {}", options.rom, e))?;
             
             let rom = Rom::new(&rom_data)
-                .map_err(|e| format!("Failed to parse ROM file '{}': {}", options.rom_path, e))?;
+                .map_err(|e| format!("Failed to parse ROM file '{}': {}", options.rom, e))?;
             
             println!("Loaded ROM: {} PRG ROM, {} CHR ROM, Mapper: {}", 
                      rom.prg_rom.len(), rom.chr_rom.len(), rom.mapper);

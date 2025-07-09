@@ -4,7 +4,7 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 pub struct EmulatorOptions {
     #[arg(short, long, default_value = "", help = "Path to the .nes ROM file")]
-    pub rom_path: String,
+    pub rom: String,
     
     #[arg(short, long, default_value_t = 800)]
     pub width: u32,

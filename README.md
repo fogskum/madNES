@@ -1,6 +1,6 @@
 # madNES - Nintendo Entertainment System Emulator
 
-A Nintendo Entertainment System (NES) emulator written in Rust, featuring accurate 6502 CPU emulation and a modern debugging interface.
+A Nintendo Entertainment System (NES) emulator written in Rust, featuring accurate 6502 CPU emulation and a modern debugging interface. WORK IN PROGRESS!
 
 ![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
 ![SDL2](https://img.shields.io/badge/SDL2-1428A0?style=for-the-badge&logo=sdl&logoColor=white)
@@ -235,28 +235,6 @@ python3 create_test_rom.py
 cargo run -- --rom-path test.nes
 ```
 
-## Example Usage
-
-```rust
-use madnes::cpu::cpu::Cpu;
-use madnes::cpu::memory::Memory;
-use madnes::rom::rom::Rom;
-
-// Create CPU and load ROM
-let mut cpu = Cpu::new();
-let rom_data = std::fs::read("game.nes").unwrap();
-let rom = Rom::new(&rom_data).unwrap();
-cpu.load_rom(rom);
-
-// Reset to start execution
-cpu.reset();
-
-// Execute instructions
-while cpu.step() {
-    // CPU continues execution
-}
-```
-
 ## Roadmap
 
 ### Phase 1: Core CPU ✅
@@ -287,17 +265,6 @@ while cpu.step() {
 - [ ] Debugging tools
 - [ ] Performance profiling
 - [ ] Game compatibility testing
-
-## Contributing
-
-Contributions are welcome! Please see areas marked with TODO in the codebase.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass: `cargo test`
-5. Submit a pull request
 
 ## License
 
