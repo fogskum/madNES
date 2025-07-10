@@ -1,0 +1,144 @@
+8000  0A       ASL                              A:41 X:00 Y:00 P:24 SP:FD CYC:  08000  49 42    EOR #$42                         A:42 X:00 Y:00 P:24 SP:FD CYC:  08000  0A       ASL                              A:80 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  49 FF    EOR #$FF                         A:AA X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+
+8000  FE 00 30 INC $3000,X                      A:00 X:10 Y:00 P:24 SP:FD CYC:  0
+8000  EE 00 30 INC $3000                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  50 02    BVC $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  49 55    EOR #$55                         A:F0 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  70 02    BVS $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+8000  50 02    BVC $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  0
+8000  06 10    ASL $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  70 02    BVS $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  0
+
+
+
+
+
+8002  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  5
+8002  0A       ASL                              A:A5 X:00 Y:00 P:A4 SP:FD CYC:  2
+8000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8003  49 AA    EOR #$AA                         A:4A X:00 Y:00 P:25 SP:FD CYC:  48004  A5 20    LDA $20                          A:00 X:00 Y:00 P:24 SP:FD CYC: 10
+
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8006  00       BRK                              A:07 X:00 Y:00 P:24 SP:FD CYC: 138000  A9 42    LDA #$42                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+8000  A9 FF    LDA #$FF                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:42 X:00 Y:00 P:24 SP:FD CYC:  2
+8002  00       BRK                              A:FF X:00 Y:00 P:A4 SP:FD CYC:  28000  A9 00    LDA #$00                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+8000  A5 10    LDA $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:00 X:00 Y:00 P:26 SP:FD CYC:  2
+8002  00       BRK                              A:77 X:00 Y:00 P:24 SP:FD CYC:  3
+8000  A9 C0    LDA #$C0                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  AA       TAX                              A:C0 X:00 Y:00 P:A4 SP:FD CYC:  2
+8003  E8       INX                              A:C0 X:C0 Y:00 P:A4 SP:FD CYC:  4
+8004  00       BRK                              A:C0 X:C1 Y:00 P:A4 SP:FD CYC:  6
+8000  0A       ASL                              A:80 X:00 Y:00 P:24 SP:FD CYC:  08000  06 10    ASL $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+8000  50 02    BVC $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  0
+8000  0A       ASL                              A:41 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  50 02    BVC $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  70 02    BVS $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  FE 00 30 INC $3000,X                      A:00 X:10 Y:00 P:24 SP:FD CYC:  08000  70 02    BVS $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  0
+
+8000  49 55    EOR #$55                         A:F0 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  49 42    EOR #$42                         A:42 X:00 Y:00 P:24 SP:FD CYC:  08000  EE 00 30 INC $3000                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+8000  49 FF    EOR #$FF                         A:AA X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+
+
+
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8002  0A       ASL                              A:A5 X:00 Y:00 P:A4 SP:FD CYC:  28000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+
+8002  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  5
+8000  A9 42    LDA #$42                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8003  49 AA    EOR #$AA                         A:4A X:00 Y:00 P:25 SP:FD CYC:  4
+8004  A5 20    LDA $20                          A:00 X:00 Y:00 P:24 SP:FD CYC: 10
+8000  A9 FF    LDA #$FF                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:42 X:00 Y:00 P:24 SP:FD CYC:  2
+8006  00       BRK                              A:07 X:00 Y:00 P:24 SP:FD CYC: 13
+8002  00       BRK                              A:FF X:00 Y:00 P:A4 SP:FD CYC:  28000  A9 00    LDA #$00                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+8000  A5 10    LDA $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:00 X:00 Y:00 P:26 SP:FD CYC:  2
+8002  00       BRK                              A:77 X:00 Y:00 P:24 SP:FD CYC:  3
+8000  A9 C0    LDA #$C0                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  AA       TAX                              A:C0 X:00 Y:00 P:A4 SP:FD CYC:  2
+8003  E8       INX                              A:C0 X:C0 Y:00 P:A4 SP:FD CYC:  4
+8004  00       BRK                              A:C0 X:C1 Y:00 P:A4 SP:FD CYC:  6
+8000  50 02    BVC $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  08000  0A       ASL                              A:41 X:00 Y:00 P:24 SP:FD CYC:  0
+
+8000  70 02    BVS $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  49 42    EOR #$42                         A:42 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  0A       ASL                              A:80 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  50 02    BVC $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  70 02    BVS $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  08000  49 FF    EOR #$FF                         A:AA X:00 Y:00 P:24 SP:FD CYC:  08000  FE 00 30 INC $3000,X                      A:00 X:10 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  EE 00 30 INC $3000                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  06 10    ASL $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  49 55    EOR #$55                         A:F0 X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+
+
+
+
+
+
+
+
+
+8002  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  5
+8000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  0A       ASL                              A:A5 X:00 Y:00 P:A4 SP:FD CYC:  2
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8003  49 AA    EOR #$AA                         A:4A X:00 Y:00 P:25 SP:FD CYC:  48004  A5 20    LDA $20                          A:00 X:00 Y:00 P:24 SP:FD CYC: 10
+
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8006  00       BRK                              A:07 X:00 Y:00 P:24 SP:FD CYC: 13
+8000  A9 42    LDA #$42                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:42 X:00 Y:00 P:24 SP:FD CYC:  2
+8000  A9 FF    LDA #$FF                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:FF X:00 Y:00 P:A4 SP:FD CYC:  2
+8000  A9 00    LDA #$00                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:00 X:00 Y:00 P:26 SP:FD CYC:  2
+8000  A5 10    LDA $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:77 X:00 Y:00 P:24 SP:FD CYC:  3
+8000  A9 C0    LDA #$C0                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  AA       TAX                              A:C0 X:00 Y:00 P:A4 SP:FD CYC:  2
+8003  E8       INX                              A:C0 X:C0 Y:00 P:A4 SP:FD CYC:  4
+8004  00       BRK                              A:C0 X:C1 Y:00 P:A4 SP:FD CYC:  6
+8000  50 02    BVC $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  70 02    BVS $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  0
+8000  49 42    EOR #$42                         A:42 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  50 02    BVC $8004                        A:00 X:00 Y:00 P:64 SP:FD CYC:  08000  0A       ASL                              A:41 X:00 Y:00 P:24 SP:FD CYC:  0
+8000  FE 00 30 INC $3000,X                      A:00 X:10 Y:00 P:24 SP:FD CYC:  0
+
+8000  49 FF    EOR #$FF                         A:AA X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  0A       ASL                              A:80 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  70 02    BVS $8004                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  06 10    ASL $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  EE 00 30 INC $3000                        A:00 X:00 Y:00 P:24 SP:FD CYC:  08000  49 55    EOR #$55                         A:F0 X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+
+
+
+8000  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+
+
+
+
+8000  E6 10    INC $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  08002  0A       ASL                              A:A5 X:00 Y:00 P:A4 SP:FD CYC:  2
+8002  E6 20    INC $20                          A:00 X:00 Y:00 P:24 SP:FD CYC:  5
+
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8003  49 AA    EOR #$AA                         A:4A X:00 Y:00 P:25 SP:FD CYC:  48004  A5 20    LDA $20                          A:00 X:00 Y:00 P:24 SP:FD CYC: 10
+
+8000  F6 10    INC $10,X                        A:00 X:05 Y:00 P:24 SP:FD CYC:  0
+8006  00       BRK                              A:07 X:00 Y:00 P:24 SP:FD CYC: 13
+8000  A9 42    LDA #$42                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:42 X:00 Y:00 P:24 SP:FD CYC:  2
+8000  A9 FF    LDA #$FF                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:FF X:00 Y:00 P:A4 SP:FD CYC:  2
+8000  A9 00    LDA #$00                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:00 X:00 Y:00 P:26 SP:FD CYC:  2
+8000  A5 10    LDA $10                          A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  00       BRK                              A:77 X:00 Y:00 P:24 SP:FD CYC:  3
+8000  A9 C0    LDA #$C0                         A:00 X:00 Y:00 P:24 SP:FD CYC:  0
+8002  AA       TAX                              A:C0 X:00 Y:00 P:A4 SP:FD CYC:  2
+8003  E8       INX                              A:C0 X:C0 Y:00 P:A4 SP:FD CYC:  4
+8004  00       BRK                              A:C0 X:C1 Y:00 P:A4 SP:FD CYC:  6

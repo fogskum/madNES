@@ -1191,7 +1191,7 @@ mod tests {
         cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
         cpu.pc = 0x8000;
-        cpu.step(); // Execute BVC
+        let _ = cpu.step(); // Execute BVC
         // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
         assert_eq!(cpu.pc, 0x8004);
     }
@@ -1203,7 +1203,7 @@ mod tests {
         cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag AFTER load_program
         cpu.pc = 0x8000;
-        cpu.step(); // Execute BVC
+        let _ = cpu.step(); // Execute BVC
         // PC should be at 0x8000 + 2 (instruction length) = 0x8002
         assert_eq!(cpu.pc, 0x8002);
     }
@@ -1215,7 +1215,7 @@ mod tests {
         cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag
         cpu.pc = 0x8000;
-        cpu.step(); // Execute BVS
+        let _ = cpu.step(); // Execute BVS
         // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
         assert_eq!(cpu.pc, 0x8004);
     }
@@ -1227,7 +1227,7 @@ mod tests {
         cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
         cpu.pc = 0x8000;
-        cpu.step(); // Execute BVS
+        let _ = cpu.step(); // Execute BVS
         // PC should be at 0x8000 + 2 (instruction length) = 0x8002
         assert_eq!(cpu.pc, 0x8002);
     }
@@ -1239,7 +1239,7 @@ mod tests {
         // INC $10 - increment value at zero page address $10
         cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
-        cpu.step(); // Execute INC $10
+        let _ = cpu.step(); // Execute INC $10
         assert_eq!(cpu.read_byte(0x10), 0x43);
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(!cpu.get_flag(StatusFlag::Negative));
@@ -1253,7 +1253,7 @@ mod tests {
         cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.x = 0x05; // Set X AFTER load_program since it calls reset()
         cpu.pc = 0x8000;
-        cpu.step(); // Execute INC $10,X
+        let _ = cpu.step(); // Execute INC $10,X
         assert_eq!(cpu.read_byte(0x15), 0x7F);
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(!cpu.get_flag(StatusFlag::Negative));
@@ -1266,7 +1266,7 @@ mod tests {
         // INC $3000 - increment value at absolute address $3000
         cpu.load_program(vec![0xEE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
-        cpu.step(); // Execute INC $3000
+        let _ = cpu.step(); // Execute INC $3000
         assert_eq!(cpu.read_byte(0x3000), 0x81);
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(cpu.get_flag(StatusFlag::Negative)); // 0x81 has bit 7 set
@@ -1280,7 +1280,7 @@ mod tests {
         cpu.load_program(vec![0xFE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.x = 0x10; // Set X AFTER load_program since it calls reset()
         cpu.pc = 0x8000;
-        cpu.step(); // Execute INC $3000,X
+        let _ = cpu.step(); // Execute INC $3000,X
         assert_eq!(cpu.read_byte(0x3010), 0xFF);
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(cpu.get_flag(StatusFlag::Negative)); // 0xFF has bit 7 set
@@ -1293,7 +1293,7 @@ mod tests {
         // INC $10 - increment value at zero page address $10
         cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
-        cpu.step(); // Execute INC $10
+        let _ = cpu.step(); // Execute INC $10
         assert_eq!(cpu.read_byte(0x10), 0x00); // Should wrap around to 0
         assert!(cpu.get_flag(StatusFlag::Zero)); // Zero flag should be set
         assert!(!cpu.get_flag(StatusFlag::Negative)); // Negative flag should be clear
@@ -1306,7 +1306,7 @@ mod tests {
         // INC $10 - increment value at zero page address $10
         cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
-        cpu.step(); // Execute INC $10
+        let _ = cpu.step(); // Execute INC $10
         assert_eq!(cpu.read_byte(0x10), 0x80); // Should become 0x80
         assert!(!cpu.get_flag(StatusFlag::Zero)); // Zero flag should be clear
         assert!(cpu.get_flag(StatusFlag::Negative)); // Negative flag should be set (bit 7 is 1)
@@ -1325,7 +1325,7 @@ mod tests {
         let opcode = cpu.read_byte(cpu.pc);
         println!("Opcode: 0x{:02X}", opcode);
         
-        cpu.step(); // Execute INC $10
+        let _ = cpu.step(); // Execute INC $10
         
         println!("After INC: memory[0x10] = {}", cpu.read_byte(0x10));
         assert_eq!(cpu.read_byte(0x10), 0x43);
@@ -1348,7 +1348,7 @@ mod tests {
         println!("Opcode: 0x{:02X}, Operand: 0x{:02X}", opcode, operand);
         println!("Calculated address should be: 0x{:02X} + 0x{:02X} = 0x{:02X}", operand, cpu.x, operand.wrapping_add(cpu.x));
         
-        cpu.step(); // Execute INC $10,X
+        let _ = cpu.step(); // Execute INC $10,X
         
         println!("After INC: memory[0x15] = {}", cpu.read_byte(0x15));
         println!("After INC: memory[0x10] = {}", cpu.read_byte(0x10));
@@ -1387,7 +1387,7 @@ mod tests {
         cpu.load_program(vec![0x49, 0xFF, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.a = 0b10101010; // Set A to known pattern AFTER load_program
         cpu.pc = 0x8000;
-        cpu.step(); // Execute EOR #$FF
+        let _ = cpu.step(); // Execute EOR #$FF
         assert_eq!(cpu.a, 0b01010101); // All bits should be flipped
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(!cpu.get_flag(StatusFlag::Negative));
@@ -1400,7 +1400,7 @@ mod tests {
         cpu.load_program(vec![0x49, 0x42, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.a = 0x42; // Set A AFTER load_program
         cpu.pc = 0x8000;
-        cpu.step(); // Execute EOR #$42
+        let _ = cpu.step(); // Execute EOR #$42
         assert_eq!(cpu.a, 0x00);
         assert!(cpu.get_flag(StatusFlag::Zero));
         assert!(!cpu.get_flag(StatusFlag::Negative));
@@ -1413,7 +1413,7 @@ mod tests {
         cpu.load_program(vec![0x0A, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.a = 0b01000001; // Set A to known pattern AFTER load_program
         cpu.pc = 0x8000;
-        cpu.step(); // Execute ASL A
+        let _ = cpu.step(); // Execute ASL A
         assert_eq!(cpu.a, 0b10000010); // Should be shifted left
         assert!(!cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 0, so no carry
         assert!(!cpu.get_flag(StatusFlag::Zero));
@@ -1427,7 +1427,7 @@ mod tests {
         cpu.load_program(vec![0x0A, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.a = 0b10000000; // Set A with bit 7 set AFTER load_program
         cpu.pc = 0x8000;
-        cpu.step(); // Execute ASL A
+        let _ = cpu.step(); // Execute ASL A
         assert_eq!(cpu.a, 0b00000000); // Should be shifted left, result is 0
         assert!(cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 1, so carry set
         assert!(cpu.get_flag(StatusFlag::Zero)); // Result is zero
@@ -1441,7 +1441,7 @@ mod tests {
         // ASL $10 - shift left memory at zero page
         cpu.load_program(vec![0x06, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
         cpu.pc = 0x8000;
-        cpu.step(); // Execute ASL $10
+        let _ = cpu.step(); // Execute ASL $10
         assert_eq!(cpu.read_byte(0x10), 0b01100110); // Should be shifted left
         assert!(!cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 0, so no carry
         assert!(!cpu.get_flag(StatusFlag::Zero));
@@ -1461,16 +1461,16 @@ mod tests {
         cpu.pc = 0x8000;
         
         // Execute EOR #$55
-        cpu.step();
+        let _ = cpu.step();
         assert_eq!(cpu.a, 0b10100101); // 0b11110000 ^ 0b01010101 = 0b10100101
         
         // Execute ASL A
-        cpu.step();
+        let _ = cpu.step();
         assert_eq!(cpu.a, 0b01001010); // 0b10100101 << 1 = 0b01001010
         assert!(cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 1
         
         // Execute EOR #$AA
-        cpu.step();
+        let _ = cpu.step();
         assert_eq!(cpu.a, 0b11100000); // 0b01001010 ^ 0b10101010 = 0b11100000
         assert!(!cpu.get_flag(StatusFlag::Zero));
         assert!(cpu.get_flag(StatusFlag::Negative)); // Bit 7 is 1

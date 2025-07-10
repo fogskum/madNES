@@ -2,6 +2,7 @@
 #[cfg(test)]
 pub mod test_utils {
     /// Macro to create a test ROM with specified data
+    #[allow(unused_macros)]
     macro_rules! create_test_rom {
         ($prg_data:expr, $chr_data:expr) => {
             crate::rom::Rom {
@@ -18,6 +19,7 @@ pub mod test_utils {
     }
     
     /// Macro to create and initialize a test CPU
+    #[allow(unused_macros)]
     macro_rules! create_test_cpu {
         () => {{
             let mut cpu = crate::cpu::Cpu::new();
@@ -38,6 +40,7 @@ pub mod test_utils {
     }
     
     /// Macro to assert CPU flags
+    #[allow(unused_macros)]
     macro_rules! assert_cpu_flags {
         ($cpu:expr, $(($flag:expr, $expected:expr)),*) => {
             $(
@@ -48,6 +51,7 @@ pub mod test_utils {
     }
     
     /// Macro for common test assertions
+    #[allow(unused_macros)]
     macro_rules! assert_memory_eq {
         ($cpu:expr, $address:expr, $expected:expr) => {
             {
@@ -59,8 +63,12 @@ pub mod test_utils {
         };
     }
     
+    #[allow(unused_imports)]
     pub(crate) use create_test_rom;
+    #[allow(unused_imports)]
     pub(crate) use create_test_cpu;
+    #[allow(unused_imports)]
     pub(crate) use assert_cpu_flags;
+    #[allow(unused_imports)]
     pub(crate) use assert_memory_eq;
 }
