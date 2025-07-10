@@ -180,19 +180,21 @@ impl Memory for NesMemory {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AddressingMode {
     None,
     Immediate,
     Implied, // same as Accumulator
     IndirectX,
     IndirectY,
+    Indirect,
     ZeroPage,
     ZeroPageX,
     ZeroPageY,
     Absolute,
     AbsoluteX,
     AbsoluteY,
+    Relative,
 }
 
 use std::fmt;
@@ -205,12 +207,21 @@ impl fmt::Display for AddressingMode {
             AddressingMode::Implied => write!(f, "Implied"),
             AddressingMode::IndirectX => write!(f, "IndirectX"),
             AddressingMode::IndirectY => write!(f, "IndirectY"),
+            AddressingMode::Indirect => write!(f, "Indirect"),
             AddressingMode::ZeroPage => write!(f, "ZeroPage"),
             AddressingMode::ZeroPageX => write!(f, "ZeroPageX"),
             AddressingMode::ZeroPageY => write!(f, "ZeroPageY"),
             AddressingMode::Absolute => write!(f, "Absolute"),
             AddressingMode::AbsoluteX => write!(f, "AbsoluteX"),
             AddressingMode::AbsoluteY => write!(f, "AbsoluteY"),
+            AddressingMode::Relative => write!(f, "Relative"),
         }
+    }
+}
+
+impl fmt::Debug for AddressingMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Use the same implementation as Display for simplicity
+        fmt::Display::fmt(self, f)
     }
 }

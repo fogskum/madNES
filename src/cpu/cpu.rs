@@ -1,6 +1,6 @@
 use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
-use crate::cpu::instructions::{Instruction, INSTRUCTIONS};
+use crate::cpu::instructions::{Instruction, get_instruction};
 use crate::rom::Rom;
 use crate::error::{IoError, EmulatorError, CpuError, CpuResult};
 use crate::utils::bit_utils;
@@ -243,8 +243,7 @@ impl Cpu {
         let opcode = self.read_byte(self.pc);
 
         // get instruction metadata for opcode
-        let instruction = INSTRUCTIONS
-            .get(&opcode)
+        let instruction = get_instruction(opcode)
             .ok_or_else(|| CpuError::UnknownOpcode { opcode, pc: self.pc })?;
 
         // Collect instruction bytes for logging
@@ -478,6 +477,23 @@ impl Cpu {
                 let lo = self.read_byte(base as u16) as u16;
                 let hi = self.read_byte(base.wrapping_add(1) as u16) as u16;
                 Ok(((hi << 8) | lo).wrapping_add(self.y as u16))
+            }
+            AddressingMode::Indirect => {
+                // Used for JMP ($xxxx) - indirect jump
+                let indirect_addr = self.read_word(self.pc);
+                // 6502 bug: if the low byte is 0xFF, high byte is read from same page
+                if indirect_addr & 0xFF == 0xFF {
+                    let lo = self.read_byte(indirect_addr) as u16;
+                    let hi = self.read_byte(indirect_addr & 0xFF00) as u16;
+                    Ok((hi << 8) | lo)
+                } else {
+                    Ok(self.read_word(indirect_addr))
+                }
+            }
+            AddressingMode::Relative => {
+                // Used for branch instructions
+                let offset = self.read_byte(self.pc) as i8;
+                Ok((self.pc + 1).wrapping_add(offset as u16))
             }
             AddressingMode::Implied => Ok(0), // Implied has no operand address
             AddressingMode::None => Err(CpuError::InvalidInstruction {
@@ -767,7 +783,7 @@ impl Cpu {
     // Core disassembly logic - formats a single instruction at given address
     fn disassemble_instruction_at(&self, pc: u16) -> (String, u16) {
         let opcode = self.read_byte(pc);
-        if let Some(instr) = INSTRUCTIONS.get(&opcode) {
+        if let Some(instr) = get_instruction(opcode) {
             let mut bytes = vec![opcode];
             for i in 1..instr.bytes {
                 bytes.push(self.read_byte(pc + i as u16));
@@ -912,7 +928,7 @@ impl Cpu {
     /// Log CPU state in nestest.log format
     fn log_cpu_state(&self, instruction_bytes: &[u8], opcode: u8) {
         // Get instruction info
-        let instruction = INSTRUCTIONS.get(&opcode).unwrap();
+        let instruction = get_instruction(opcode).unwrap();
         
         // Build disassembly string based on addressing mode
         let disassembly = match instruction.addressing_mode {
@@ -979,6 +995,23 @@ impl Cpu {
             AddressingMode::IndirectY => {
                 if instruction_bytes.len() > 1 {
                     format!("{} (${:02X}),Y", instruction.mnemonic, instruction_bytes[1])
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::Indirect => {
+                if instruction_bytes.len() > 2 {
+                    let addr = (instruction_bytes[2] as u16) << 8 | instruction_bytes[1] as u16;
+                    format!("{} (${:04X})", instruction.mnemonic, addr)
+                } else {
+                    instruction.mnemonic.to_string()
+                }
+            }
+            AddressingMode::Relative => {
+                if instruction_bytes.len() > 1 {
+                    let offset = instruction_bytes[1] as i8;
+                    let target = (self.pc + 2).wrapping_add(offset as u16);
+                    format!("{} ${:04X}", instruction.mnemonic, target)
                 } else {
                     instruction.mnemonic.to_string()
                 }

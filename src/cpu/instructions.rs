@@ -1,9 +1,7 @@
 use crate::cpu::memory::AddressingMode;
-use lazy_static::lazy_static;
-use std::collections::HashMap;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Instruction {
-    // fixed set of strings for the instructions that are stored in the binary
     pub mnemonic: &'static str,
     pub opcode: u8,
     pub addressing_mode: AddressingMode,
@@ -12,7 +10,7 @@ pub struct Instruction {
 }
 
 impl Instruction {
-    pub fn new(
+    pub const fn new(
         mnemonic: &'static str,
         opcode: u8,
         addressing_mode: AddressingMode,
@@ -29,169 +27,288 @@ impl Instruction {
     }
 }
 
-lazy_static! {
-    pub static ref INSTRUCTIONS: HashMap<u8, Instruction> = {
-        let mut map = HashMap::new();
+pub static INSTRUCTION_TABLE: [Option<Instruction>; 256] = {
+    let mut table = [None; 256];
+    
+    // Helper macro to insert an instruction into the table
+    macro_rules! insert_instruction {
+        ($table:expr, $opcode:expr, $mnemonic:expr, $addressing_mode:expr, $cycles:expr, $bytes:expr) => {
+            $table[$opcode as usize] = Some(Instruction::new($mnemonic, $opcode, $addressing_mode, $cycles, $bytes));
+        };
+    }
+    
+    // Transfer instructions
+    insert_instruction!(table, 0xA9, "LDA", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xA5, "LDA", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xB5, "LDA", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0xAD, "LDA", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xBD, "LDA", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0xB9, "LDA", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0xA1, "LDA", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0xB1, "LDA", AddressingMode::IndirectY, 5, 2);
+    insert_instruction!(table, 0xA2, "LDX", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xA6, "LDX", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xB6, "LDX", AddressingMode::ZeroPageY, 4, 2);
+    insert_instruction!(table, 0xAE, "LDX", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xBE, "LDX", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0xA0, "LDY", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xA4, "LDY", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xB4, "LDY", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0xAC, "LDY", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xBC, "LDY", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0x85, "STA", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x8D, "STA", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x9D, "STA", AddressingMode::AbsoluteX, 5, 3);
+    insert_instruction!(table, 0x99, "STA", AddressingMode::AbsoluteY, 5, 3);
+    insert_instruction!(table, 0x81, "STA", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0x91, "STA", AddressingMode::IndirectY, 6, 2);
+    insert_instruction!(table, 0x95, "STA", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0x86, "STX", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x96, "STX", AddressingMode::ZeroPageY, 4, 2);
+    insert_instruction!(table, 0x8E, "STX", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x84, "STY", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x94, "STY", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0x8C, "STY", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xAA, "TAX", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xA8, "TAY", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xBA, "TSX", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x8A, "TXA", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x98, "TYA", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x9A, "TXS", AddressingMode::Implied, 2, 1);
+    
+    // Stack operations
+    insert_instruction!(table, 0x48, "PHA", AddressingMode::Implied, 3, 1);
+    insert_instruction!(table, 0x08, "PHP", AddressingMode::Implied, 3, 1);
+    insert_instruction!(table, 0x68, "PLA", AddressingMode::Implied, 4, 1);
+    insert_instruction!(table, 0x28, "PLP", AddressingMode::Implied, 4, 1);
 
-        // transfer
-        map.insert(0xA9, Instruction::new("LDA", 0xA9, AddressingMode::Immediate, 2, 2));
-        map.insert(0xA5, Instruction::new("LDA", 0xA5, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xB5, Instruction::new("LDA", 0xB5, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0xAD, Instruction::new("LDA", 0xAD, AddressingMode::Absolute, 4, 3));
-        map.insert(0xBD, Instruction::new("LDA", 0xBD, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0xB9, Instruction::new("LDA", 0xB9, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0xA1, Instruction::new("LDA", 0xA1, AddressingMode::IndirectX, 6, 2));
-        map.insert(0xB1, Instruction::new("LDA", 0xB1, AddressingMode::IndirectY, 5, 2));
-        map.insert(0xA2, Instruction::new("LDX", 0xA2, AddressingMode::Immediate, 2, 2));
-        map.insert(0xA6, Instruction::new("LDX", 0xA6, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xB6, Instruction::new("LDX", 0xB6, AddressingMode::ZeroPageY, 4, 2));
-        map.insert(0xAE, Instruction::new("LDX", 0xAE, AddressingMode::Absolute, 4, 3));
-        map.insert(0xBE, Instruction::new("LDX", 0xBE, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0xA0, Instruction::new("LDY", 0xA0, AddressingMode::Immediate, 2, 2));
-        map.insert(0xA4, Instruction::new("LDY", 0xA4, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xB4, Instruction::new("LDY", 0xB4, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0xAC, Instruction::new("LDY", 0xAC, AddressingMode::Absolute, 4, 3));
-        map.insert(0xBC, Instruction::new("LDY", 0xBC, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0x85, Instruction::new("STA", 0x85, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x8D, Instruction::new("STA", 0x8D, AddressingMode::Absolute, 4, 3));
-        map.insert(0x9D, Instruction::new("STA", 0x9D, AddressingMode::AbsoluteX, 5, 3));
-        map.insert(0x99, Instruction::new("STA", 0x99, AddressingMode::AbsoluteY, 5, 3));
-        map.insert(0x81, Instruction::new("STA", 0x81, AddressingMode::IndirectX, 6, 2));
-        map.insert(0x91, Instruction::new("STA", 0x91, AddressingMode::IndirectY, 6, 2));
-        map.insert(0x95, Instruction::new("STA", 0x95, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0x86, Instruction::new("STX", 0x86, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x96, Instruction::new("STX", 0x96, AddressingMode::ZeroPageY, 4, 2));
-        map.insert(0x8E, Instruction::new("STX", 0x8E, AddressingMode::Absolute, 4, 3));
-        map.insert(0x84, Instruction::new("STY", 0x84, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x94, Instruction::new("STY", 0x94, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0x8C, Instruction::new("STY", 0x8C, AddressingMode::Absolute, 4, 3));
-        map.insert(0xAA, Instruction::new("TAX", 0xAA, AddressingMode::Implied, 2, 1));
-        map.insert(0xA8, Instruction::new("TAY", 0xA8, AddressingMode::Implied, 2, 1));
-        map.insert(0xBA, Instruction::new("TSX", 0xBA, AddressingMode::Implied, 2, 1));
-        map.insert(0x8A, Instruction::new("TXA", 0x8A, AddressingMode::Implied, 2, 1));
-        map.insert(0x98, Instruction::new("TYA", 0x98, AddressingMode::Implied, 2, 1));
-        map.insert(0x9A, Instruction::new("TXS", 0x9A, AddressingMode::Implied, 2, 1));
+    // Increment/Decrement
+    insert_instruction!(table, 0xC6, "DEC", AddressingMode::ZeroPage, 5, 2);
+    insert_instruction!(table, 0xD6, "DEC", AddressingMode::ZeroPageX, 6, 2);
+    insert_instruction!(table, 0xCE, "DEC", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0xDE, "DEC", AddressingMode::AbsoluteX, 7, 3);
+    insert_instruction!(table, 0xCA, "DEX", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x88, "DEY", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xE6, "INC", AddressingMode::ZeroPage, 5, 2);
+    insert_instruction!(table, 0xF6, "INC", AddressingMode::ZeroPageX, 6, 2);
+    insert_instruction!(table, 0xEE, "INC", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0xFE, "INC", AddressingMode::AbsoluteX, 7, 3);
+    insert_instruction!(table, 0xE8, "INX", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xC8, "INY", AddressingMode::Implied, 2, 1);
+
+    // Arithmetic
+    insert_instruction!(table, 0x69, "ADC", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0x65, "ADC", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x75, "ADC", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0x6D, "ADC", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x7D, "ADC", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0x79, "ADC", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0x61, "ADC", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0x71, "ADC", AddressingMode::IndirectY, 5, 2);
+    insert_instruction!(table, 0xE9, "SBC", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xE5, "SBC", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xF5, "SBC", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0xED, "SBC", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xFD, "SBC", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0xF9, "SBC", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0xE1, "SBC", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0xF1, "SBC", AddressingMode::IndirectY, 5, 2);
+
+    // Logical operations
+    insert_instruction!(table, 0x29, "AND", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0x25, "AND", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x35, "AND", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0x2D, "AND", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x3D, "AND", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0x39, "AND", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0x21, "AND", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0x31, "AND", AddressingMode::IndirectY, 5, 2);
+    insert_instruction!(table, 0x49, "EOR", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0x45, "EOR", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x55, "EOR", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0x4D, "EOR", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x5D, "EOR", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0x59, "EOR", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0x41, "EOR", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0x51, "EOR", AddressingMode::IndirectY, 5, 2);
+    insert_instruction!(table, 0x09, "ORA", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0x05, "ORA", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0x15, "ORA", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0x0D, "ORA", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x1D, "ORA", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0x19, "ORA", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0x01, "ORA", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0x11, "ORA", AddressingMode::IndirectY, 5, 2);
+
+    // Bit manipulation and shift operations
+    insert_instruction!(table, 0x0A, "ASL", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x06, "ASL", AddressingMode::ZeroPage, 5, 2);
+    insert_instruction!(table, 0x16, "ASL", AddressingMode::ZeroPageX, 6, 2);
+    insert_instruction!(table, 0x0E, "ASL", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0x1E, "ASL", AddressingMode::AbsoluteX, 7, 3);
+    insert_instruction!(table, 0x4A, "LSR", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x46, "LSR", AddressingMode::ZeroPage, 5, 2);
+    insert_instruction!(table, 0x56, "LSR", AddressingMode::ZeroPageX, 6, 2);
+    insert_instruction!(table, 0x4E, "LSR", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0x5E, "LSR", AddressingMode::AbsoluteX, 7, 3);
+    insert_instruction!(table, 0x2A, "ROL", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x26, "ROL", AddressingMode::ZeroPage, 5, 2);
+    insert_instruction!(table, 0x36, "ROL", AddressingMode::ZeroPageX, 6, 2);
+    insert_instruction!(table, 0x2E, "ROL", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0x3E, "ROL", AddressingMode::AbsoluteX, 7, 3);
+    insert_instruction!(table, 0x6A, "ROR", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x66, "ROR", AddressingMode::ZeroPage, 5, 2);
+    insert_instruction!(table, 0x76, "ROR", AddressingMode::ZeroPageX, 6, 2);
+    insert_instruction!(table, 0x6E, "ROR", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0x7E, "ROR", AddressingMode::AbsoluteX, 7, 3);
+
+    // Flag operations
+    insert_instruction!(table, 0x18, "CLC", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xD8, "CLD", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x58, "CLI", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xB8, "CLV", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x38, "SEC", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0xF8, "SED", AddressingMode::Implied, 2, 1);
+    insert_instruction!(table, 0x78, "SEI", AddressingMode::Implied, 2, 1);
+
+    // Compare operations
+    insert_instruction!(table, 0xC9, "CMP", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xC5, "CMP", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xD5, "CMP", AddressingMode::ZeroPageX, 4, 2);
+    insert_instruction!(table, 0xCD, "CMP", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xDD, "CMP", AddressingMode::AbsoluteX, 4, 3);
+    insert_instruction!(table, 0xD9, "CMP", AddressingMode::AbsoluteY, 4, 3);
+    insert_instruction!(table, 0xC1, "CMP", AddressingMode::IndirectX, 6, 2);
+    insert_instruction!(table, 0xD1, "CMP", AddressingMode::IndirectY, 5, 2);
+    insert_instruction!(table, 0xE0, "CPX", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xE4, "CPX", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xEC, "CPX", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0xC0, "CPY", AddressingMode::Immediate, 2, 2);
+    insert_instruction!(table, 0xC4, "CPY", AddressingMode::ZeroPage, 3, 2);
+    insert_instruction!(table, 0xCC, "CPY", AddressingMode::Absolute, 4, 3);
+
+    // Branch instructions
+    insert_instruction!(table, 0x90, "BCC", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0xB0, "BCS", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0xF0, "BEQ", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0x30, "BMI", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0xD0, "BNE", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0x10, "BPL", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0x50, "BVC", AddressingMode::Relative, 2, 2);
+    insert_instruction!(table, 0x70, "BVS", AddressingMode::Relative, 2, 2);
+
+    // Jump and subroutine instructions
+    insert_instruction!(table, 0x4C, "JMP", AddressingMode::Absolute, 3, 3);
+    insert_instruction!(table, 0x6C, "JMP", AddressingMode::Indirect, 5, 3);
+    insert_instruction!(table, 0x20, "JSR", AddressingMode::Absolute, 6, 3);
+    insert_instruction!(table, 0x60, "RTS", AddressingMode::Implied, 6, 1);
+    
+    // Interrupt and system instructions
+    insert_instruction!(table, 0x00, "BRK", AddressingMode::Implied, 7, 1);
+    insert_instruction!(table, 0x40, "RTI", AddressingMode::Implied, 6, 1);
+
+    // Bit test
+    insert_instruction!(table, 0x2C, "BIT", AddressingMode::Absolute, 4, 3);
+    insert_instruction!(table, 0x24, "BIT", AddressingMode::ZeroPage, 3, 2);
+    
+    // No operation
+    insert_instruction!(table, 0xEA, "NOP", AddressingMode::Implied, 2, 1);
+
+    table
+};
+
+/// Get instruction metadata for a given opcode.
+/// Returns None for invalid/unimplemented opcodes.
+#[inline]
+pub fn get_instruction(opcode: u8) -> Option<&'static Instruction> {
+    INSTRUCTION_TABLE[opcode as usize].as_ref()
+}
+
+/// Check if an opcode is valid (has an implementation).
+#[inline]
+pub fn is_valid_opcode(opcode: u8) -> bool {
+    INSTRUCTION_TABLE[opcode as usize].is_some()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_instruction_lookup() {
+        // Test valid opcodes
+        assert!(is_valid_opcode(0xA9)); // LDA immediate
+        assert!(is_valid_opcode(0xEA)); // NOP
+        assert!(is_valid_opcode(0x00)); // BRK
         
-        // stack
-        map.insert(0x48, Instruction::new("PHA", 0x48, AddressingMode::Implied, 1, 3));
-        map.insert(0x08, Instruction::new("PHP", 0x08, AddressingMode::Implied, 1, 3));
-        map.insert(0x68, Instruction::new("PLA", 0x68, AddressingMode::Implied, 1, 4));
-
-        // inc/dec
-        map.insert(0xC6, Instruction::new("DEC", 0xC6, AddressingMode::ZeroPage, 5, 2));
-        map.insert(0xD6, Instruction::new("DEC", 0xD6, AddressingMode::ZeroPageX, 6, 2));
-        map.insert(0xCE, Instruction::new("DEC", 0xCE, AddressingMode::Absolute, 6, 3));
-        map.insert(0xDE, Instruction::new("DEC", 0xDE, AddressingMode::AbsoluteX, 7, 3));
-        map.insert(0xCA, Instruction::new("DEX", 0xCA, AddressingMode::Implied, 2, 1));
-        map.insert(0x88, Instruction::new("DEY", 0x88, AddressingMode::Implied, 2, 1));
-        map.insert(0xE6, Instruction::new("INC", 0xE6, AddressingMode::ZeroPage, 5, 2));
-        map.insert(0xF6, Instruction::new("INC", 0xF6, AddressingMode::ZeroPageX, 6, 2));
-        map.insert(0xEE, Instruction::new("INC", 0xEE, AddressingMode::Absolute, 6, 3));
-        map.insert(0xFE, Instruction::new("INC", 0xFE, AddressingMode::AbsoluteX, 7, 3));
-        map.insert(0xE8, Instruction::new("INX", 0xE8, AddressingMode::Implied, 2, 1));
-        map.insert(0xC8, Instruction::new("INY", 0xC8, AddressingMode::Implied, 2, 1));
-
-        // arithmetic
-        map.insert(0x69, Instruction::new("ADC", 0x69, AddressingMode::Immediate, 2, 2));
-        map.insert(0x65, Instruction::new("ADC", 0x65, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x75, Instruction::new("ADC", 0x75, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0x6D, Instruction::new("ADC", 0x6D, AddressingMode::Absolute, 4, 3));
-        map.insert(0x7D, Instruction::new("ADC", 0x7D, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0x79, Instruction::new("ADC", 0x79, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0x61, Instruction::new("ADC", 0x61, AddressingMode::IndirectX, 6, 2));
-        map.insert(0x71, Instruction::new("ADC", 0x71, AddressingMode::IndirectY, 5, 2));
-        map.insert(0xE9, Instruction::new("SBC", 0xE9, AddressingMode::Immediate, 2, 2));
-        map.insert(0xE5, Instruction::new("SBC", 0xE5, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xF5, Instruction::new("SBC", 0xF5, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0xED, Instruction::new("SBC", 0xED, AddressingMode::Absolute, 4, 3));
-        map.insert(0xFD, Instruction::new("SBC", 0xFD, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0xF9, Instruction::new("SBC", 0xF9, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0xE1, Instruction::new("SBC", 0xE1, AddressingMode::IndirectX, 6, 2));
-        map.insert(0xF1, Instruction::new("SBC", 0xF1, AddressingMode::IndirectY, 5, 2));
-
-        // logical
-        map.insert(0x29, Instruction::new("AND", 0x29, AddressingMode::Immediate, 2, 2));
-        map.insert(0x49, Instruction::new("EOR", 0x49, AddressingMode::Immediate, 2, 2));
-        map.insert(0x45, Instruction::new("EOR", 0x45, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x55, Instruction::new("EOR", 0x55, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0x4D, Instruction::new("EOR", 0x4D, AddressingMode::Absolute, 4, 3));
-        map.insert(0x5D, Instruction::new("EOR", 0x5D, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0x59, Instruction::new("EOR", 0x59, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0x41, Instruction::new("EOR", 0x41, AddressingMode::IndirectX, 6, 2));
-        map.insert(0x51, Instruction::new("EOR", 0x51, AddressingMode::IndirectY, 5, 2));
-        map.insert(0x09, Instruction::new("ORA", 0x09, AddressingMode::Immediate, 2, 2));
-        map.insert(0x05, Instruction::new("ORA", 0x05, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0x15, Instruction::new("ORA", 0x15, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0x0D, Instruction::new("ORA", 0x0D, AddressingMode::Absolute, 4, 3));
-        map.insert(0x1D, Instruction::new("ORA", 0x1D, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0x19, Instruction::new("ORA", 0x19, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0x01, Instruction::new("ORA", 0x01, AddressingMode::IndirectX, 6, 2));
-        map.insert(0x11, Instruction::new("ORA", 0x11, AddressingMode::IndirectY, 5, 2));
-
-        // shift
-        map.insert(0x0A, Instruction::new("ASL", 0x0A, AddressingMode::Implied, 2, 1));
-        map.insert(0x06, Instruction::new("ASL", 0x06, AddressingMode::ZeroPage, 5, 2));
-        map.insert(0x16, Instruction::new("ASL", 0x16, AddressingMode::ZeroPageX, 6, 2));
-        map.insert(0x0E, Instruction::new("ASL", 0x0E, AddressingMode::Absolute, 6, 3));
-        map.insert(0x1E, Instruction::new("ASL", 0x1E, AddressingMode::AbsoluteX, 7, 3));
-        map.insert(0x4A, Instruction::new("LSR", 0x4A, AddressingMode::Implied, 2, 1));
-        map.insert(0x46, Instruction::new("LSR", 0x46, AddressingMode::ZeroPage, 5, 2));
-        map.insert(0x56, Instruction::new("LSR", 0x56, AddressingMode::ZeroPageX, 6, 2));
-        map.insert(0x4E, Instruction::new("LSR", 0x4E, AddressingMode::Absolute, 6, 3));
-        map.insert(0x5E, Instruction::new("LSR", 0x5E, AddressingMode::AbsoluteX, 7, 3));
-        map.insert(0x2A, Instruction::new("ROL", 0x2A, AddressingMode::Implied, 2, 1));
-        map.insert(0x6A, Instruction::new("ROR", 0x6A, AddressingMode::Implied, 2, 1));
-
-        // flags
-        map.insert(0x18, Instruction::new("CLC", 0x18, AddressingMode::Implied, 2, 1));
-        map.insert(0xD8, Instruction::new("CLD", 0xD8, AddressingMode::Implied, 2, 1));
-        map.insert(0x58, Instruction::new("CLI", 0x58, AddressingMode::Implied, 2, 1));
-        map.insert(0xB8, Instruction::new("CLV", 0xB8, AddressingMode::Implied, 2, 1));
-        map.insert(0x38, Instruction::new("SEC", 0x38, AddressingMode::Implied, 2, 1));
-        map.insert(0xF8, Instruction::new("SED", 0xF8, AddressingMode::Implied, 2, 1));
-        map.insert(0x78, Instruction::new("SEI", 0x78, AddressingMode::Implied, 2, 1));
-
-        // compare
-        map.insert(0xC9, Instruction::new("CMP", 0xC9, AddressingMode::Immediate, 2, 2));
-        map.insert(0xC5, Instruction::new("CMP", 0xC5, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xD5, Instruction::new("CMP", 0xD5, AddressingMode::ZeroPageX, 4, 2));
-        map.insert(0xCD, Instruction::new("CMP", 0xCD, AddressingMode::Absolute, 4, 3));
-        map.insert(0xDD, Instruction::new("CMP", 0xDD, AddressingMode::AbsoluteX, 4, 3));
-        map.insert(0xD9, Instruction::new("CMP", 0xD9, AddressingMode::AbsoluteY, 4, 3));
-        map.insert(0xC1, Instruction::new("CMP", 0xC1, AddressingMode::IndirectX, 6, 2));
-        map.insert(0xD1, Instruction::new("CMP", 0xD1, AddressingMode::IndirectY, 5, 2));
-        map.insert(0xE0, Instruction::new("CPX", 0xE0, AddressingMode::Immediate, 2, 2));
-        map.insert(0xE4, Instruction::new("CPX", 0xE4, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xEC, Instruction::new("CPX", 0xEC, AddressingMode::Absolute, 4, 3));
-        map.insert(0xC0, Instruction::new("CPY", 0xC0, AddressingMode::Immediate, 2, 2));
-        map.insert(0xC4, Instruction::new("CPY", 0xC4, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xCC, Instruction::new("CPY", 0xCC, AddressingMode::Absolute, 4, 3));
-
-        // branch
-        map.insert(0x90, Instruction::new("BCC", 0x90, AddressingMode::Implied, 2, 2));
-        map.insert(0xB0, Instruction::new("BCS", 0xB0, AddressingMode::Implied, 2, 2));
-        map.insert(0xF0, Instruction::new("BEQ", 0xF0, AddressingMode::Implied, 2, 2));
-        map.insert(0x30, Instruction::new("BMI", 0x30, AddressingMode::Implied, 2, 2));
-        map.insert(0xD0, Instruction::new("BNE", 0xD0, AddressingMode::Implied, 2, 2));
-        map.insert(0x10, Instruction::new("BPL", 0x10, AddressingMode::Implied, 2, 2));
-        map.insert(0x50, Instruction::new("BVC", 0x50, AddressingMode::Implied, 2, 2));
-        map.insert(0x70, Instruction::new("BVS", 0x70, AddressingMode::Implied, 2, 2));
-
-        // jump
-        map.insert(0x4C, Instruction::new("JMP", 0x4C, AddressingMode::Absolute, 3, 3));
-        map.insert(0x6C, Instruction::new("JMP", 0x6C, AddressingMode::IndirectX, 5, 3));
-        map.insert(0x20, Instruction::new("JSR", 0x20, AddressingMode::Absolute, 6, 3));
-        map.insert(0x60, Instruction::new("RTS", 0x60, AddressingMode::Implied, 6, 1));
+        // Test invalid opcodes
+        assert!(!is_valid_opcode(0x02)); // Invalid opcode
+        assert!(!is_valid_opcode(0xFF)); // Invalid opcode
         
-        // interrupts
-        map.insert(0x00, Instruction::new("BRK", 0x00, AddressingMode::Implied, 7, 1));
-        map.insert(0x40, Instruction::new("RTI", 0x40, AddressingMode::Implied, 6, 1));
+        // Test instruction retrieval
+        let lda_imm = get_instruction(0xA9).unwrap();
+        assert_eq!(lda_imm.mnemonic, "LDA");
+        assert_eq!(lda_imm.opcode, 0xA9);
+        assert_eq!(lda_imm.cycles, 2);
+        assert_eq!(lda_imm.bytes, 2);
+        
+        let nop = get_instruction(0xEA).unwrap();
+        assert_eq!(nop.mnemonic, "NOP");
+        assert_eq!(nop.opcode, 0xEA);
+        assert_eq!(nop.cycles, 2);
+        assert_eq!(nop.bytes, 1);
+    }
 
-        // other
-        map.insert(0x2C, Instruction::new("BIT", 0x2C, AddressingMode::Absolute, 4, 3));
-        map.insert(0x24, Instruction::new("BIT", 0x24, AddressingMode::ZeroPage, 3, 2));
-        map.insert(0xEA, Instruction::new("NOP", 0xEA, AddressingMode::Implied, 2, 1));
-
-        map
-    };
+    #[test]
+    fn test_instruction_table_completeness() {
+        // Count valid instructions
+        let valid_count = INSTRUCTION_TABLE.iter().filter(|i| i.is_some()).count();
+        println!("Valid instructions: {}", valid_count);
+        
+        // Should have exactly the instructions we defined
+        assert!(valid_count > 100); // We have about 135 instructions
+        
+        // Test a few key instructions from each category
+        let key_opcodes = [
+            0xA9, // LDA immediate
+            0x85, // STA zero page
+            0x4C, // JMP absolute
+            0x20, // JSR
+            0x60, // RTS
+            0x00, // BRK
+            0xEA, // NOP
+            0x69, // ADC immediate
+            0xE9, // SBC immediate
+            0x29, // AND immediate
+            0x09, // ORA immediate
+            0x49, // EOR immediate
+            0x0A, // ASL accumulator
+            0x4A, // LSR accumulator
+            0x2A, // ROL accumulator
+            0x6A, // ROR accumulator
+            0x18, // CLC
+            0x38, // SEC
+            0xC9, // CMP immediate
+            0xE0, // CPX immediate
+            0xC0, // CPY immediate
+            0x90, // BCC
+            0xF0, // BEQ
+            0xD0, // BNE
+            0x10, // BPL
+            0xE8, // INX
+            0xC8, // INY
+            0xCA, // DEX
+            0x88, // DEY
+            0xAA, // TAX
+            0xA8, // TAY
+            0x8A, // TXA
+            0x98, // TYA
+            0x48, // PHA
+            0x68, // PLA
+        ];
+        
+        for &opcode in &key_opcodes {
+            assert!(is_valid_opcode(opcode), "Opcode 0x{:02X} should be valid", opcode);
+        }
+    }
 }
