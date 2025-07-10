@@ -16,28 +16,28 @@ const PROGRAM_ADDRESS: u16 = 0x8000;
 /// and simulating CPU behavior.
 pub struct Cpu {
     // Accumulator
-    pub a: u8,
+    a: u8,
 
     // X and Y registers
-    pub x: u8,
-    pub y: u8,
+    x: u8,
+    y: u8,
 
     // Program counter
     // Stores the address of the next byte for the CPU to read.
     // Increases with each clock or can be directly set in a branch to jump to
     // different parts of the program, like an if-statement.
-    pub pc: u16,
+    pc: u16,
 
     // Stack pointer
     // Points to an address somewhere in the memory (bus)
     // Incremented/decremented as we pull things from the stack
-    pub sp: u8,
+    sp: u8,
 
     // Status register
-    pub p: StatusFlag,
-    pub memory: NesMemory,
-    pub cycles: u64,
-    pub instruction_count: u64,
+    p: StatusFlag,
+    memory: NesMemory,
+    cycles: u64,
+    instruction_count: u64,
 }
 
 impl Memory for Cpu {
