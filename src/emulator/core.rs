@@ -87,7 +87,7 @@ impl Emulator {
                 .map_err(|e| EmulatorError::Io(IoError::ReadError(format!("Failed to read ROM file '{}': {}", options.rom, e))))?;
             
             let rom = Rom::new(&rom_data)
-                .map_err(|e| EmulatorError::Rom(e))?;
+                .map_err(EmulatorError::Rom)?;
             
             println!("Loaded ROM: {} PRG ROM, {} CHR ROM, Mapper: {}", 
                      rom.prg_rom.len(), rom.chr_rom.len(), rom.mapper);
@@ -129,7 +129,6 @@ impl Emulator {
     }
 
     pub fn run(&mut self) -> Result<(), EmulatorError> {
-
         let mut last_update = Instant::now();
         let mut last_cpu_step = Instant::now();
         let mut cpu_running = true;
@@ -138,7 +137,10 @@ impl Emulator {
         
         'running: loop {
             // Collect events first to avoid multiple mutable borrows of self
-            let events: Vec<Event> = self.event_pump.poll_iter().collect();
+            let events: Vec<Event> = self.event_pump
+                .poll_iter()
+                .collect();
+            
             for event in events {
                 match event {
                     Event::Quit { .. }
@@ -252,7 +254,7 @@ impl Emulator {
         let mut text_batch = Vec::new();
         
         // Prepare all text items for batch rendering
-        text_batch.push((format!("CPU REGISTERS"), 10, 10, Color::RGB(255, 255, 255)));
+        text_batch.push(("CPU REGISTERS".to_string(), 10, 10, Color::RGB(255, 255, 255)));
         
         let mode_text = if auto_mode { "MODE: AUTO (SPACE=manual, N=step)" } else { "MODE: MANUAL (SPACE=auto, N=step)" };
         text_batch.push((mode_text.to_string(), 200, 10, Color::RGB(255, 200, 100)));
@@ -266,7 +268,7 @@ impl Emulator {
         // Status flags
         let status_byte = self.cpu.get_status();
         text_batch.push((format!("P:  ${:02X}  ({:08b})", status_byte, status_byte), 10, 130, Color::RGB(0, 255, 255)));
-        text_batch.push((format!("FLAGS: N V - B D I Z C"), 10, 150, Color::RGB(200, 200, 200)));
+        text_batch.push(("FLAGS: N V - B D I Z C".to_string(), 10, 150, Color::RGB(200, 200, 200)));
         
         let flags_status = format!("       {} {} {} {} {} {} {} {}", 
             if self.cpu.get_flag(crate::cpu::flags::StatusFlag::Negative) { "1" } else { "0" },
@@ -289,7 +291,7 @@ impl Emulator {
         text_batch.push((format!("CYCLES: {}", self.cpu.get_cycles()), 450, 170, Color::RGB(255, 200, 255)));
         
         // Disassembly title
-        text_batch.push((format!("DISASSEMBLY"), 10, 200, Color::RGB(255, 255, 255)));
+        text_batch.push(("DISASSEMBLY".to_string(), 10, 200, Color::RGB(255, 255, 255)));
         
         // Prepare disassembly lines
         let lines_to_render: Vec<String> = self.disassembly_lines

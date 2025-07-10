@@ -1,8 +1,8 @@
-pub mod cpu;
+pub mod core;
 pub mod memory;
 pub mod flags;
 pub mod instructions;
 
-pub use cpu::Cpu;
+pub use core::Cpu;
 pub use memory::Memory;
 pub use flags::StatusFlag;

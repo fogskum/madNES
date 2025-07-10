@@ -1,5 +1,5 @@
 use clap::Parser;
-use madnes::emulator::emulator::Emulator;
+use madnes::emulator::core::Emulator;
 use madnes::emulator::options::EmulatorOptions;
 
 fn main() {

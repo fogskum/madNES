@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 pub const NES_CPU_FREQUENCY: u32 = 1_789_773; // Hz (NTSC)
 pub const NES_PPU_FREQUENCY: u32 = NES_CPU_FREQUENCY * 3;
 pub const NES_FRAME_RATE: f64 = 60.098814;
-pub const CYCLES_PER_FRAME: u32 = NES_CPU_FREQUENCY as u32 / 60;
+pub const CYCLES_PER_FRAME: u32 = NES_CPU_FREQUENCY / 60;
 
 /// Timer for managing emulation timing
 pub struct Timer {

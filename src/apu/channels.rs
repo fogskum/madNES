@@ -470,10 +470,8 @@ impl DmcChannel {
                     if self.output_level <= 125 {
                         self.output_level += 2;
                     }
-                } else {
-                    if self.output_level >= 2 {
-                        self.output_level -= 2;
-                    }
+                } else if self.output_level >= 2 {
+                    self.output_level -= 2;
                 }
             }
             

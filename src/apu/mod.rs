@@ -1,7 +1,7 @@
-pub mod apu;
+pub mod core;
 pub mod channels;
 pub mod mixer;
 pub mod macros;
 
-pub use apu::Apu;
+pub use core::Apu;
 pub use channels::*;

@@ -195,7 +195,7 @@ impl Cpu {
         let rom = Rom {
             prg_rom: program.clone(),
             chr_rom: vec![0; 8192], // 8KB CHR ROM
-            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mirror_mode: crate::rom::MirrorMode::Horizontal,
             mapper: 0, // NROM
             prg_ram_size: 8192, // 8KB PRG RAM
         };
@@ -1084,7 +1084,7 @@ mod tests {
         let rom = Rom {
             prg_rom: rom_data,
             chr_rom: vec![0; 8192],
-            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mirror_mode: crate::rom::MirrorMode::Horizontal,
             mapper: 0,
             prg_ram_size: 8192,
         };
@@ -1522,7 +1522,7 @@ mod tests {
         let rom_data = Rom {
             prg_rom: vec![0x01, 0x02, 0x03, 0x04],
             chr_rom: vec![0; 8192],
-            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mirror_mode: crate::rom::MirrorMode::Horizontal,
             mapper: 0,
             prg_ram_size: 8192,
         };
@@ -1538,7 +1538,7 @@ mod tests {
         let rom_16kb = Rom {
             prg_rom: vec![0xAA; 0x4000], // 16KB ROM
             chr_rom: vec![0; 8192],
-            mirror_mode: crate::rom::rom::MirrorMode::Horizontal,
+            mirror_mode: crate::rom::MirrorMode::Horizontal,
             mapper: 0,
             prg_ram_size: 8192,
         };

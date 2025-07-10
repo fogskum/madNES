@@ -1,5 +1,5 @@
-pub mod rom;
+pub mod core;
 pub mod ines;
 
-pub use rom::{Rom, MirrorMode};
+pub use core::{Rom, MirrorMode};
 pub use ines::InesHeader;

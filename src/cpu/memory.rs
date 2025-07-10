@@ -41,6 +41,12 @@ pub struct NesMemory {
     prg_ram: [u8; 0x2000], // PRG RAM (8KB) at $6000-$7FFF
 }
 
+impl Default for NesMemory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NesMemory {
     pub fn new() -> Self {
         Self {

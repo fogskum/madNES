@@ -3,7 +3,6 @@
 /// These macros are ready to be used to refactor APU channel implementations
 /// but are not currently used to avoid warnings. They demonstrate the DRY principle
 /// by extracting common patterns from channel register handling.
-
 #[allow(unused_macros)]
 macro_rules! impl_envelope_common {
     () => {
