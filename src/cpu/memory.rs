@@ -62,6 +62,21 @@ impl NesMemory {
         self.rom = Some(rom);
     }
     
+    /// Get CHR ROM data for graphics rendering
+    pub fn get_chr_rom(&self) -> Option<&[u8]> {
+        self.rom.as_ref().map(|rom| rom.chr_rom.as_slice())
+    }
+
+    /// Get PRG ROM data 
+    pub fn get_prg_rom(&self) -> Option<&[u8]> {
+        self.rom.as_ref().map(|rom| rom.prg_rom.as_slice())
+    }
+
+    /// Check if ROM is loaded
+    pub fn has_rom(&self) -> bool {
+        self.rom.is_some()
+    }
+    
     /// Get the mirrored address for internal RAM
     fn mirror_internal_ram(&self, address: u16) -> usize {
         mirror_address(address, 0x07FF) as usize

@@ -21,7 +21,6 @@ pub struct Emulator {
     main_canvas: Canvas<Window>,
     debug_canvas: Canvas<Window>,
     event_pump: EventPump,
-    rotation: f64,
     disassembly_lines: Vec<String>,
     texture_creator: TextureCreator<WindowContext>,
     ttf_context: Sdl2TtfContext,
@@ -114,7 +113,6 @@ impl Emulator {
             main_canvas,
             debug_canvas,
             event_pump,
-            rotation: 0.0,
             disassembly_lines: Vec::new(),
             texture_creator,
             ttf_context,
@@ -140,7 +138,7 @@ impl Emulator {
             let events: Vec<Event> = self.event_pump
                 .poll_iter()
                 .collect();
-            
+
             for event in events {
                 match event {
                     Event::Quit { .. }
@@ -228,22 +226,29 @@ impl Emulator {
     }
 
     fn render(&mut self, auto_mode: bool) -> Result<(), EmulatorError> {
-        // Render main window with the rotating square
-        self.main_canvas.set_draw_color(Color::RGB(0, 255, 0));
+        // Render main window with NES screen
+        self.main_canvas.set_draw_color(Color::RGB(0, 0, 0));
         self.main_canvas.clear();
 
-        // Draw a red rotating square in the center
+        // Get NES screen dimensions (256x240 pixels)
+        let nes_width = 256;
+        let nes_height = 240;
+        
+        // Calculate scaling to fit the window
         let window_size = self.main_canvas.window().size();
-        let (center_x, center_y) = (window_size.0 as i32 / 2, window_size.1 as i32 / 2);
+        let scale_x = window_size.0 as f32 / nes_width as f32;
+        let scale_y = window_size.1 as f32 / nes_height as f32;
+        let scale = scale_x.min(scale_y) as u32; // Use uniform scaling
         
-        // Simple rotation approximation - just move the square in a circle
-        let radius = 100.0;
-        let x = center_x + (radius * self.rotation.cos()) as i32 - 25;
-        let y = center_y + (radius * self.rotation.sin()) as i32 - 25;
+        // Center the NES screen in the window
+        let scaled_width = nes_width * scale;
+        let scaled_height = nes_height * scale;
+        let offset_x = (window_size.0 - scaled_width) / 2;
+        let offset_y = (window_size.1 - scaled_height) / 2;
+
+        // Render NES screen pixel by pixel
+        self.render_nes_screen(offset_x as i32, offset_y as i32, scale)?;
         
-        self.main_canvas.set_draw_color(Color::RGB(255, 0, 0));
-        self.main_canvas.fill_rect(Rect::new(x, y, 50, 50))
-            .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e)))?;
         self.main_canvas.present();
 
         // Render debug window with CPU status and disassembly info
@@ -379,7 +384,169 @@ impl Emulator {
     }
 
     fn update(&mut self, dt: f64) {
-        // Rotate 2 radians per second
-        self.rotation += 2.0 * dt;
+        // Update emulator state (currently minimal since we're not implementing full PPU timing)
+        // In a full NES emulator, this would handle PPU timing, APU updates, etc.
+        let _ = dt; // Acknowledge parameter to avoid unused warning
+    }
+
+    /// Render the NES screen by reading CHR ROM data and converting it to pixels
+    fn render_nes_screen(&mut self, offset_x: i32, offset_y: i32, scale: u32) -> Result<(), EmulatorError> {
+        // Basic NES color palette (simplified NTSC palette)
+        let nes_palette = [
+            Color::RGB(84, 84, 84),    // 0x00 - Dark gray
+            Color::RGB(0, 30, 116),    // 0x01 - Dark blue
+            Color::RGB(8, 16, 144),    // 0x02 - Purple
+            Color::RGB(48, 0, 136),    // 0x03 - Dark purple
+            Color::RGB(68, 0, 100),    // 0x04 - Dark red
+            Color::RGB(92, 0, 48),     // 0x05 - Brown
+            Color::RGB(84, 4, 0),      // 0x06 - Dark brown
+            Color::RGB(60, 24, 0),     // 0x07 - Orange brown
+            Color::RGB(32, 42, 0),     // 0x08 - Dark green
+            Color::RGB(8, 58, 0),      // 0x09 - Green
+            Color::RGB(0, 64, 0),      // 0x0A - Light green
+            Color::RGB(0, 60, 13),     // 0x0B - Cyan green
+            Color::RGB(0, 50, 60),     // 0x0C - Dark cyan
+            Color::RGB(0, 0, 0),       // 0x0D - Black
+            Color::RGB(0, 0, 0),       // 0x0E - Black
+            Color::RGB(0, 0, 0),       // 0x0F - Black
+            
+            Color::RGB(152, 150, 152), // 0x10 - Light gray
+            Color::RGB(8, 76, 196),    // 0x11 - Blue
+            Color::RGB(48, 50, 236),   // 0x12 - Light purple
+            Color::RGB(92, 30, 228),   // 0x13 - Pink
+            Color::RGB(136, 20, 176),  // 0x14 - Magenta
+            Color::RGB(160, 20, 100),  // 0x15 - Red
+            Color::RGB(152, 34, 32),   // 0x16 - Orange red
+            Color::RGB(120, 60, 0),    // 0x17 - Orange
+            Color::RGB(84, 90, 0),     // 0x18 - Yellow green
+            Color::RGB(40, 114, 0),    // 0x19 - Light green
+            Color::RGB(8, 124, 0),     // 0x1A - Green
+            Color::RGB(0, 118, 40),    // 0x1B - Cyan
+            Color::RGB(0, 102, 120),   // 0x1C - Light cyan
+            Color::RGB(0, 0, 0),       // 0x1D - Black
+            Color::RGB(0, 0, 0),       // 0x1E - Black
+            Color::RGB(0, 0, 0),       // 0x1F - Black
+            
+            Color::RGB(236, 238, 236), // 0x20 - White
+            Color::RGB(76, 154, 236),  // 0x21 - Light blue
+            Color::RGB(120, 124, 236), // 0x22 - Lavender
+            Color::RGB(176, 98, 236),  // 0x23 - Light pink
+            Color::RGB(228, 84, 236),  // 0x24 - Pink
+            Color::RGB(236, 88, 180),  // 0x25 - Light red
+            Color::RGB(236, 106, 100), // 0x26 - Salmon
+            Color::RGB(212, 136, 32),  // 0x27 - Light orange
+            Color::RGB(160, 170, 0),   // 0x28 - Yellow
+            Color::RGB(116, 196, 0),   // 0x29 - Light green
+            Color::RGB(76, 208, 32),   // 0x2A - Lime
+            Color::RGB(56, 204, 108),  // 0x2B - Light cyan
+            Color::RGB(56, 180, 204),  // 0x2C - Cyan
+            Color::RGB(60, 60, 60),    // 0x2D - Dark gray
+            Color::RGB(0, 0, 0),       // 0x2E - Black
+            Color::RGB(0, 0, 0),       // 0x2F - Black
+            
+            Color::RGB(236, 238, 236), // 0x30 - White (repeat)
+            Color::RGB(168, 204, 236), // 0x31 - Very light blue
+            Color::RGB(188, 188, 236), // 0x32 - Very light purple
+            Color::RGB(212, 178, 236), // 0x33 - Very light pink
+            Color::RGB(236, 174, 236), // 0x34 - Very light magenta
+            Color::RGB(236, 174, 212), // 0x35 - Very light red
+            Color::RGB(236, 180, 176), // 0x36 - Very light orange
+            Color::RGB(228, 196, 144), // 0x37 - Cream
+            Color::RGB(204, 210, 120), // 0x38 - Light yellow
+            Color::RGB(180, 222, 120), // 0x39 - Very light green
+            Color::RGB(168, 226, 144), // 0x3A - Very light lime
+            Color::RGB(152, 226, 180), // 0x3B - Very light cyan
+            Color::RGB(160, 214, 228), // 0x3C - Very light blue
+            Color::RGB(160, 162, 160), // 0x3D - Light gray
+            Color::RGB(0, 0, 0),       // 0x3E - Black
+            Color::RGB(0, 0, 0),       // 0x3F - Black
+        ];
+
+        // Create a simple test pattern if no ROM is loaded or for demonstration
+        // This will show a checkerboard pattern using CHR ROM data if available
+        for y in 0..240 {
+            for x in 0..256 {
+                // Read pattern data from CHR ROM or create test pattern
+                let color_index = self.get_pixel_color(x, y);
+                let color = nes_palette[color_index as usize % nes_palette.len()];
+                
+                // Draw scaled pixel
+                let pixel_rect = Rect::new(
+                    offset_x + (x * scale) as i32,
+                    offset_y + (y * scale) as i32,
+                    scale,
+                    scale,
+                );
+                
+                self.main_canvas.set_draw_color(color);
+                self.main_canvas.fill_rect(pixel_rect)
+                    .map_err(|e| EmulatorError::Sdl(SdlError::RendererCreationFailed(e)))?;
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Get the color index for a pixel at the given coordinates
+    /// This is a simplified implementation that reads from CHR ROM
+    fn get_pixel_color(&self, x: u32, y: u32) -> u8 {
+        // Try to read from CHR ROM if available
+        if let Some(chr_data) = self.get_chr_rom_data() {
+            if !chr_data.is_empty() {
+                // Calculate which 8x8 tile we're in
+                let tile_x = x / 8;
+                let tile_y = y / 8;
+                let tiles_per_row = 32; // Standard NES nametable width
+                let tile_index = (tile_y * tiles_per_row + tile_x) as usize;
+                
+                // Get pixel within the tile (0-7)
+                let pixel_x = x % 8;
+                let pixel_y = y % 8;
+                
+                // Each tile is 16 bytes in CHR ROM (8 bytes for low bit plane, 8 for high)
+                if tile_index * 16 + 15 < chr_data.len() {
+                    let tile_offset = tile_index * 16;
+                    
+                    // Get the two bit planes for this pixel
+                    let low_byte = chr_data[tile_offset + pixel_y as usize];
+                    let high_byte = chr_data[tile_offset + 8 + pixel_y as usize];
+                    
+                    // Extract the specific pixel (bit 7-pixel_x)
+                    let bit_pos = 7 - pixel_x;
+                    let low_bit = (low_byte >> bit_pos) & 1;
+                    let high_bit = (high_byte >> bit_pos) & 1;
+                    
+                    // Combine bits to get color index (0-3)
+                    let color_index = (high_bit << 1) | low_bit;
+                    
+                    // Map to palette (simplified - using first 4 colors)
+                    return match color_index {
+                        0 => 0x0F, // Black
+                        1 => 0x00, // Dark gray  
+                        2 => 0x10, // Light gray
+                        3 => 0x20, // White
+                        _ => 0x0F,
+                    };
+                }
+            }
+        }
+        
+        // Fallback: Create a simple test pattern
+        let tile_x = x / 8;
+        let tile_y = y / 8;
+        
+        // Checkerboard pattern
+        if (tile_x + tile_y) % 2 == 0 {
+            // Show some CHR data pattern or gradient
+            ((x + y) / 8) as u8 % 64
+        } else {
+            // Different pattern for alternating tiles
+            ((x * 2 + y) / 16) as u8 % 64
+        }
+    }
+
+    /// Get CHR ROM data from the CPU's memory
+    fn get_chr_rom_data(&self) -> Option<&[u8]> {
+        self.cpu.get_chr_rom()
     }
 }

@@ -181,6 +181,16 @@ impl Cpu {
         self.instruction_count
     }
 
+    /// Get CHR ROM data for graphics rendering
+    pub fn get_chr_rom(&self) -> Option<&[u8]> {
+        self.memory.get_chr_rom()
+    }
+
+    /// Get PRG ROM data 
+    pub fn get_prg_rom(&self) -> Option<&[u8]> {
+        self.memory.get_prg_rom()
+    }
+
     // Loads the given program to PRG ROM memory range (0x8000-0xFFFF)
     pub fn load_program(&mut self, program: Vec<u8>, address: u16) -> Result<(), String> {
         // For NES, programs are typically loaded to PRG ROM area (0x8000+)
