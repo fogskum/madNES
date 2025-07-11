@@ -1,5 +1,5 @@
 /// Macros to reduce boilerplate in APU channel implementations
-/// 
+///
 /// These macros are ready to be used to refactor APU channel implementations
 /// but are not currently used to avoid warnings. They demonstrate the DRY principle
 /// by extracting common patterns from channel register handling.
@@ -12,18 +12,18 @@ macro_rules! impl_envelope_common {
             self.envelope_enabled = (value & 0x10) == 0;
             self.envelope_volume = value & 0x0F;
         }
-        
+
         /// Common length counter handling
         pub fn update_length_counter(&mut self, value: u8) {
             self.length_counter = LENGTH_TABLE[(value >> 3) as usize];
             self.envelope_start = true;
         }
-        
+
         /// Common timer handling
         pub fn update_timer_low(&mut self, value: u8) {
             self.timer_period = (self.timer_period & 0xFF00) | (value as u16);
         }
-        
+
         pub fn update_timer_high(&mut self, value: u8) {
             self.timer_period = (self.timer_period & 0x00FF) | (((value & 0x07) as u16) << 8);
         }

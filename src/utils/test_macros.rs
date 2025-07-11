@@ -17,7 +17,7 @@ pub mod test_utils {
             create_test_rom!($prg_data, vec![0; 8192])
         };
     }
-    
+
     /// Macro to create and initialize a test CPU
     #[allow(unused_macros)]
     macro_rules! create_test_cpu {
@@ -38,37 +38,40 @@ pub mod test_utils {
             cpu
         }};
     }
-    
+
     /// Macro to assert CPU flags
     #[allow(unused_macros)]
     macro_rules! assert_cpu_flags {
         ($cpu:expr, $(($flag:expr, $expected:expr)),*) => {
             $(
-                assert_eq!($cpu.get_flag($flag), $expected, 
+                assert_eq!($cpu.get_flag($flag), $expected,
                     "Flag {:?} expected {}, got {}", $flag, $expected, $cpu.get_flag($flag));
             )*
         };
     }
-    
+
     /// Macro for common test assertions
     #[allow(unused_macros)]
     macro_rules! assert_memory_eq {
-        ($cpu:expr, $address:expr, $expected:expr) => {
-            {
-                use crate::cpu::Memory;
-                assert_eq!($cpu.read_byte($address), $expected, 
-                    "Memory at 0x{:04X} expected 0x{:02X}, got 0x{:02X}", 
-                    $address, $expected, $cpu.read_byte($address));
-            }
-        };
+        ($cpu:expr, $address:expr, $expected:expr) => {{
+            use crate::cpu::Memory;
+            assert_eq!(
+                $cpu.read_byte($address),
+                $expected,
+                "Memory at 0x{:04X} expected 0x{:02X}, got 0x{:02X}",
+                $address,
+                $expected,
+                $cpu.read_byte($address)
+            );
+        }};
     }
-    
-    #[allow(unused_imports)]
-    pub(crate) use create_test_rom;
-    #[allow(unused_imports)]
-    pub(crate) use create_test_cpu;
+
     #[allow(unused_imports)]
     pub(crate) use assert_cpu_flags;
     #[allow(unused_imports)]
     pub(crate) use assert_memory_eq;
+    #[allow(unused_imports)]
+    pub(crate) use create_test_cpu;
+    #[allow(unused_imports)]
+    pub(crate) use create_test_rom;
 }

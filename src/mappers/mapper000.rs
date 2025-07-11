@@ -1,7 +1,7 @@
+use crate::error::MemoryResult;
+use crate::mappers::macros::{impl_chr_access, impl_no_irq_mapper, impl_prg_mirror};
 use crate::mappers::mapper::Mapper;
 use crate::rom::MirrorMode;
-use crate::error::MemoryResult;
-use crate::mappers::macros::{impl_no_irq_mapper, impl_chr_access, impl_prg_mirror};
 
 /// Mapper 000 - NROM (No mapper)
 pub struct Mapper000 {
@@ -18,11 +18,11 @@ impl Mapper000 {
             mirror_mode: MirrorMode::Horizontal,
         }
     }
-    
+
     pub fn set_mirror_mode(&mut self, mode: MirrorMode) {
         self.mirror_mode = mode;
     }
-    
+
     impl_prg_mirror!();
 }
 

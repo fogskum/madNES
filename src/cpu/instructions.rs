@@ -29,14 +29,20 @@ impl Instruction {
 
 pub static INSTRUCTION_TABLE: [Option<Instruction>; 256] = {
     let mut table = [None; 256];
-    
+
     // Helper macro to insert an instruction into the table
     macro_rules! insert_instruction {
         ($table:expr, $opcode:expr, $mnemonic:expr, $addressing_mode:expr, $cycles:expr, $bytes:expr) => {
-            $table[$opcode as usize] = Some(Instruction::new($mnemonic, $opcode, $addressing_mode, $cycles, $bytes));
+            $table[$opcode as usize] = Some(Instruction::new(
+                $mnemonic,
+                $opcode,
+                $addressing_mode,
+                $cycles,
+                $bytes,
+            ));
         };
     }
-    
+
     // Transfer instructions
     insert_instruction!(table, 0xA9, "LDA", AddressingMode::Immediate, 2, 2);
     insert_instruction!(table, 0xA5, "LDA", AddressingMode::ZeroPage, 3, 2);
@@ -75,7 +81,7 @@ pub static INSTRUCTION_TABLE: [Option<Instruction>; 256] = {
     insert_instruction!(table, 0x8A, "TXA", AddressingMode::Implied, 2, 1);
     insert_instruction!(table, 0x98, "TYA", AddressingMode::Implied, 2, 1);
     insert_instruction!(table, 0x9A, "TXS", AddressingMode::Implied, 2, 1);
-    
+
     // Stack operations
     insert_instruction!(table, 0x48, "PHA", AddressingMode::Implied, 3, 1);
     insert_instruction!(table, 0x08, "PHP", AddressingMode::Implied, 3, 1);
@@ -202,7 +208,7 @@ pub static INSTRUCTION_TABLE: [Option<Instruction>; 256] = {
     insert_instruction!(table, 0x6C, "JMP", AddressingMode::Indirect, 5, 3);
     insert_instruction!(table, 0x20, "JSR", AddressingMode::Absolute, 6, 3);
     insert_instruction!(table, 0x60, "RTS", AddressingMode::Implied, 6, 1);
-    
+
     // Interrupt and system instructions
     insert_instruction!(table, 0x00, "BRK", AddressingMode::Implied, 7, 1);
     insert_instruction!(table, 0x40, "RTI", AddressingMode::Implied, 6, 1);
@@ -210,7 +216,7 @@ pub static INSTRUCTION_TABLE: [Option<Instruction>; 256] = {
     // Bit test
     insert_instruction!(table, 0x2C, "BIT", AddressingMode::Absolute, 4, 3);
     insert_instruction!(table, 0x24, "BIT", AddressingMode::ZeroPage, 3, 2);
-    
+
     // No operation
     insert_instruction!(table, 0xEA, "NOP", AddressingMode::Implied, 2, 1);
 
@@ -240,18 +246,18 @@ mod tests {
         assert!(is_valid_opcode(0xA9)); // LDA immediate
         assert!(is_valid_opcode(0xEA)); // NOP
         assert!(is_valid_opcode(0x00)); // BRK
-        
+
         // Test invalid opcodes
         assert!(!is_valid_opcode(0x02)); // Invalid opcode
         assert!(!is_valid_opcode(0xFF)); // Invalid opcode
-        
+
         // Test instruction retrieval
         let lda_imm = get_instruction(0xA9).unwrap();
         assert_eq!(lda_imm.mnemonic, "LDA");
         assert_eq!(lda_imm.opcode, 0xA9);
         assert_eq!(lda_imm.cycles, 2);
         assert_eq!(lda_imm.bytes, 2);
-        
+
         let nop = get_instruction(0xEA).unwrap();
         assert_eq!(nop.mnemonic, "NOP");
         assert_eq!(nop.opcode, 0xEA);
@@ -264,10 +270,10 @@ mod tests {
         // Count valid instructions
         let valid_count = INSTRUCTION_TABLE.iter().filter(|i| i.is_some()).count();
         println!("Valid instructions: {}", valid_count);
-        
+
         // Should have exactly the instructions we defined
         assert!(valid_count > 100); // We have about 135 instructions
-        
+
         // Test a few key instructions from each category
         let key_opcodes = [
             0xA9, // LDA immediate
@@ -306,9 +312,13 @@ mod tests {
             0x48, // PHA
             0x68, // PLA
         ];
-        
+
         for &opcode in &key_opcodes {
-            assert!(is_valid_opcode(opcode), "Opcode 0x{:02X} should be valid", opcode);
+            assert!(
+                is_valid_opcode(opcode),
+                "Opcode 0x{:02X} should be valid",
+                opcode
+            );
         }
     }
 }

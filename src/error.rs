@@ -142,7 +142,11 @@ impl fmt::Display for MemoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MemoryError::OutOfBounds { address, size } => {
-                write!(f, "Memory address 0x{:04X} out of bounds (size: {})", address, size)
+                write!(
+                    f,
+                    "Memory address 0x{:04X} out of bounds (size: {})",
+                    address, size
+                )
             }
             MemoryError::InvalidRegion(address) => {
                 write!(f, "Invalid memory region access at 0x{:04X}", address)
@@ -162,7 +166,11 @@ impl fmt::Display for RomError {
                 write!(f, "Invalid ROM header: {}", reason)
             }
             RomError::FileTooSmall { expected, actual } => {
-                write!(f, "ROM file too small: expected at least {} bytes, got {}", expected, actual)
+                write!(
+                    f,
+                    "ROM file too small: expected at least {} bytes, got {}",
+                    expected, actual
+                )
             }
             RomError::UnsupportedMapper(mapper) => {
                 write!(f, "Unsupported mapper: {}", mapper)

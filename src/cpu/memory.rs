@@ -5,13 +5,13 @@ pub trait Memory {
     fn read_byte(&self, address: u16) -> u8;
 
     fn write_byte(&mut self, address: u16, value: u8);
-    
+
     fn read_word(&self, address: u16) -> u16 {
         let lo = self.read_byte(address) as u16;
         let hi = self.read_byte(address + 1) as u16;
         (hi << 8) | lo
     }
-    
+
     fn write_word(&mut self, address: u16, value: u16) {
         let lo = value as u8;
         let hi = (value >> 8) as u8;
@@ -29,15 +29,15 @@ pub trait Memory {
 pub struct NesMemory {
     // Internal RAM - 2KB, mirrored 4 times
     internal_ram: [u8; 0x800], // $0000-$07FF
-    
+
     // PPU registers - 8 bytes, mirrored throughout $2000-$3FFF
     ppu_registers: [u8; 8], // $2000-$2007
-    
+
     // APU and I/O registers
     apu_io_registers: [u8; 0x20], // $4000-$401F
-    
+
     // Cartridge space
-    rom: Option<Rom>, // PRG ROM data
+    rom: Option<Rom>,      // PRG ROM data
     prg_ram: [u8; 0x2000], // PRG RAM (8KB) at $6000-$7FFF
 }
 
@@ -57,17 +57,17 @@ impl NesMemory {
             prg_ram: [0; 0x2000],
         }
     }
-    
+
     pub fn load_prg_rom(&mut self, rom: Rom) {
         self.rom = Some(rom);
     }
-    
+
     /// Get CHR ROM data for graphics rendering
     pub fn get_chr_rom(&self) -> Option<&[u8]> {
         self.rom.as_ref().map(|rom| rom.chr_rom.as_slice())
     }
 
-    /// Get PRG ROM data 
+    /// Get PRG ROM data
     pub fn get_prg_rom(&self) -> Option<&[u8]> {
         self.rom.as_ref().map(|rom| rom.prg_rom.as_slice())
     }
@@ -76,12 +76,12 @@ impl NesMemory {
     pub fn has_rom(&self) -> bool {
         self.rom.is_some()
     }
-    
+
     /// Get the mirrored address for internal RAM
     fn mirror_internal_ram(&self, address: u16) -> usize {
         mirror_address(address, 0x07FF) as usize
     }
-    
+
     /// Get the mirrored address for PPU registers
     fn mirror_ppu_registers(&self, address: u16) -> usize {
         mirror_address(address, 0x0007) as usize
@@ -96,19 +96,19 @@ impl Memory for NesMemory {
                 let mirrored_addr = self.mirror_internal_ram(address);
                 self.internal_ram[mirrored_addr]
             }
-            
+
             // PPU registers (8 bytes mirrored)
             0x2000..=0x3FFF => {
                 let mirrored_addr = self.mirror_ppu_registers(address);
                 self.ppu_registers[mirrored_addr]
             }
-            
+
             // APU and I/O registers
             0x4000..=0x4017 => {
                 let offset = (address - 0x4000) as usize;
                 self.apu_io_registers[offset]
             }
-            
+
             // APU test mode registers
             0x4018..=0x401F => {
                 let offset = (address - 0x4018) as usize;
@@ -118,13 +118,13 @@ impl Memory for NesMemory {
                     0
                 }
             }
-            
+
             // PRG RAM
             0x6000..=0x7FFF => {
                 let offset = (address - 0x6000) as usize;
                 self.prg_ram[offset]
             }
-            
+
             // PRG ROM
             0x8000..=0xFFFF => {
                 let offset = (address - 0x8000) as usize;
@@ -141,18 +141,17 @@ impl Memory for NesMemory {
                             0
                         }
                     }
-                }
-                else {
+                } else {
                     // If no ROM is loaded, return 0 (for testing)
                     0
                 }
             }
-            
+
             // Unmapped addresses
-            _ => 0
+            _ => 0,
         }
     }
-    
+
     fn write_byte(&mut self, address: u16, value: u8) {
         match address {
             // Internal RAM (2KB mirrored 4 times)
@@ -160,21 +159,21 @@ impl Memory for NesMemory {
                 let mirrored_addr = self.mirror_internal_ram(address);
                 self.internal_ram[mirrored_addr] = value;
             }
-            
+
             // PPU registers (8 bytes mirrored)
             0x2000..=0x3FFF => {
                 let mirrored_addr = self.mirror_ppu_registers(address);
                 self.ppu_registers[mirrored_addr] = value;
                 // TODO: Handle PPU register side effects
             }
-            
+
             // APU and I/O registers
             0x4000..=0x4017 => {
                 let offset = (address - 0x4000) as usize;
                 self.apu_io_registers[offset] = value;
                 // TODO: Handle APU/IO register side effects
             }
-            
+
             // APU test mode registers
             0x4018..=0x401F => {
                 let offset = (address - 0x4018) as usize;
@@ -182,19 +181,19 @@ impl Memory for NesMemory {
                     self.apu_io_registers[offset] = value;
                 }
             }
-            
+
             // PRG RAM
             0x6000..=0x7FFF => {
                 let offset = (address - 0x6000) as usize;
                 self.prg_ram[offset] = value;
             }
-            
+
             // PRG ROM
             0x8000..=0xFFFF => {
                 // ROM is read-only, ignore writes
                 // In a real NES, mapper registers might be here
             }
-            
+
             // Unmapped addresses - ignore writes
             _ => {}
         }

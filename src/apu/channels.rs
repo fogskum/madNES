@@ -47,7 +47,7 @@ impl PulseChannel {
             sequence_counter: 0,
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.enabled = false;
         self.length_counter = 0;
@@ -58,7 +58,7 @@ impl PulseChannel {
         self.timer_counter = 0;
         self.sequence_counter = 0;
     }
-    
+
     pub fn step(&mut self) {
         if self.timer_counter == 0 {
             self.timer_counter = self.timer_period;
@@ -67,7 +67,7 @@ impl PulseChannel {
             self.timer_counter -= 1;
         }
     }
-    
+
     pub fn step_envelope(&mut self) {
         if self.envelope_start {
             self.envelope_start = false;
@@ -86,13 +86,13 @@ impl PulseChannel {
             self.envelope_divider -= 1;
         }
     }
-    
+
     pub fn step_length_counter(&mut self) {
         if self.length_counter > 0 && !self.envelope_loop {
             self.length_counter -= 1;
         }
     }
-    
+
     pub fn step_sweep(&mut self) {
         if self.sweep_reload {
             self.sweep_reload = false;
@@ -114,7 +114,7 @@ impl PulseChannel {
             self.sweep_counter -= 1;
         }
     }
-    
+
     pub fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         let base = if self.channel == 0 { 0x4000 } else { 0x4004 };
         match address - base {
@@ -151,30 +151,30 @@ impl PulseChannel {
             _ => Err(MemoryError::InvalidRegion(address)),
         }
     }
-    
+
     pub fn get_sample(&self) -> f32 {
         if !self.enabled || self.length_counter == 0 || self.timer_period < 8 {
             return 0.0;
         }
-        
+
         let duty_table = [
             [0, 1, 0, 0, 0, 0, 0, 0], // 12.5%
             [0, 1, 1, 0, 0, 0, 0, 0], // 25%
             [0, 1, 1, 1, 1, 0, 0, 0], // 50%
             [1, 0, 0, 1, 1, 1, 1, 1], // 25% negated
         ];
-        
+
         let duty_output = duty_table[self.duty_cycle as usize][self.sequence_counter as usize];
         if duty_output == 0 {
             return 0.0;
         }
-        
+
         let volume = if self.envelope_enabled {
             self.envelope_counter
         } else {
             self.envelope_volume
         };
-        
+
         volume as f32 / 15.0
     }
 }
@@ -206,7 +206,7 @@ impl TriangleChannel {
             sequence_counter: 0,
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.enabled = false;
         self.length_counter = 0;
@@ -215,7 +215,7 @@ impl TriangleChannel {
         self.timer_counter = 0;
         self.sequence_counter = 0;
     }
-    
+
     pub fn step(&mut self) {
         if self.timer_counter == 0 {
             self.timer_counter = self.timer_period;
@@ -226,25 +226,25 @@ impl TriangleChannel {
             self.timer_counter -= 1;
         }
     }
-    
+
     pub fn step_envelope(&mut self) {
         if self.linear_counter_reload_flag {
             self.linear_counter = self.linear_counter_reload;
         } else if self.linear_counter > 0 {
             self.linear_counter -= 1;
         }
-        
+
         if !self.linear_counter_control {
             self.linear_counter_reload_flag = false;
         }
     }
-    
+
     pub fn step_length_counter(&mut self) {
         if self.length_counter > 0 && !self.linear_counter_control {
             self.length_counter -= 1;
         }
     }
-    
+
     pub fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         match address {
             0x4008 => {
@@ -268,17 +268,17 @@ impl TriangleChannel {
             _ => Err(MemoryError::InvalidRegion(address)),
         }
     }
-    
+
     pub fn get_sample(&self) -> f32 {
         if !self.enabled || self.length_counter == 0 || self.linear_counter == 0 {
             return 0.0;
         }
-        
+
         let triangle_table = [
-            15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
-             0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+            15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+            11, 12, 13, 14, 15,
         ];
-        
+
         let output = triangle_table[self.sequence_counter as usize];
         output as f32 / 15.0
     }
@@ -317,7 +317,7 @@ impl NoiseChannel {
             shift_register: 1,
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.enabled = false;
         self.length_counter = 0;
@@ -326,24 +326,24 @@ impl NoiseChannel {
         self.timer_counter = 0;
         self.shift_register = 1;
     }
-    
+
     pub fn step(&mut self) {
         if self.timer_counter == 0 {
             self.timer_counter = self.timer_period;
-            
+
             let feedback = if self.mode {
                 (self.shift_register & 1) ^ ((self.shift_register >> 6) & 1)
             } else {
                 (self.shift_register & 1) ^ ((self.shift_register >> 1) & 1)
             };
-            
+
             self.shift_register >>= 1;
             self.shift_register |= feedback << 14;
         } else {
             self.timer_counter -= 1;
         }
     }
-    
+
     pub fn step_envelope(&mut self) {
         if self.envelope_start {
             self.envelope_start = false;
@@ -362,13 +362,13 @@ impl NoiseChannel {
             self.envelope_divider -= 1;
         }
     }
-    
+
     pub fn step_length_counter(&mut self) {
         if self.length_counter > 0 && !self.envelope_loop {
             self.length_counter -= 1;
         }
     }
-    
+
     pub fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         match address {
             0x400C => {
@@ -394,18 +394,18 @@ impl NoiseChannel {
             _ => Err(MemoryError::InvalidRegion(address)),
         }
     }
-    
+
     pub fn get_sample(&self) -> f32 {
         if !self.enabled || self.length_counter == 0 || (self.shift_register & 1) != 0 {
             return 0.0;
         }
-        
+
         let volume = if self.envelope_enabled {
             self.envelope_counter
         } else {
             self.envelope_volume
         };
-        
+
         volume as f32 / 15.0
     }
 }
@@ -451,7 +451,7 @@ impl DmcChannel {
             output_level: 0,
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.enabled = false;
         self.bytes_remaining = 0;
@@ -460,11 +460,11 @@ impl DmcChannel {
         self.silence_flag = true;
         self.output_level = 0;
     }
-    
+
     pub fn step(&mut self) {
         if self.timer_counter == 0 {
             self.timer_counter = self.timer_period;
-            
+
             if !self.silence_flag {
                 if (self.shift_register & 1) != 0 {
                     if self.output_level <= 125 {
@@ -474,10 +474,10 @@ impl DmcChannel {
                     self.output_level -= 2;
                 }
             }
-            
+
             self.shift_register >>= 1;
             self.bits_remaining -= 1;
-            
+
             if self.bits_remaining == 0 {
                 self.bits_remaining = 8;
                 if self.sample_buffer_empty {
@@ -492,15 +492,15 @@ impl DmcChannel {
             self.timer_counter -= 1;
         }
     }
-    
+
     pub fn step_envelope(&mut self) {
         // DMC doesn't have envelope
     }
-    
+
     pub fn step_length_counter(&mut self) {
         // DMC doesn't have length counter
     }
-    
+
     pub fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         match address {
             0x4010 => {
@@ -529,20 +529,20 @@ impl DmcChannel {
             _ => Err(MemoryError::InvalidRegion(address)),
         }
     }
-    
+
     pub fn get_sample(&self) -> f32 {
         if !self.enabled {
             return 0.0;
         }
-        
+
         self.output_level as f32 / 127.0
     }
 }
 
 // Lookup tables
 const LENGTH_TABLE: [u8; 32] = [
-    10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
-    12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30,
+    10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22,
+    192, 24, 72, 26, 16, 28, 32, 30,
 ];
 
 const NOISE_PERIOD_TABLE: [u16; 16] = [

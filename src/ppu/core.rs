@@ -3,21 +3,21 @@ use crate::error::{MemoryError, MemoryResult};
 /// PPU (Picture Processing Unit) - Handles graphics rendering
 pub struct Ppu {
     // PPU registers
-    pub ctrl: u8,           // $2000
-    pub mask: u8,           // $2001
-    pub status: u8,         // $2002
-    pub oam_addr: u8,       // $2003
-    pub oam_data: u8,       // $2004
-    pub scroll: u8,         // $2005
-    pub addr: u8,           // $2006
-    pub data: u8,           // $2007
-    
+    pub ctrl: u8,     // $2000
+    pub mask: u8,     // $2001
+    pub status: u8,   // $2002
+    pub oam_addr: u8, // $2003
+    pub oam_data: u8, // $2004
+    pub scroll: u8,   // $2005
+    pub addr: u8,     // $2006
+    pub data: u8,     // $2007
+
     // PPU memory
-    pub pattern_table: [u8; 0x2000],    // $0000-$1FFF
-    pub name_table: [u8; 0x1000],       // $2000-$2FFF
-    pub palette: [u8; 0x20],            // $3F00-$3F1F
-    pub oam: [u8; 0x100],               // Object Attribute Memory
-    
+    pub pattern_table: [u8; 0x2000], // $0000-$1FFF
+    pub name_table: [u8; 0x1000],    // $2000-$2FFF
+    pub palette: [u8; 0x20],         // $3F00-$3F1F
+    pub oam: [u8; 0x100],            // Object Attribute Memory
+
     // Internal state
     pub cycle: u16,
     pub scanline: u16,
@@ -26,28 +26,28 @@ pub struct Ppu {
     pub nmi_output: bool,
     pub nmi_previous: bool,
     pub nmi_delay: u8,
-    
+
     // Registers
-    pub v: u16,             // Current VRAM address
-    pub t: u16,             // Temporary VRAM address
-    pub x: u8,              // Fine X scroll
-    pub w: bool,            // Write toggle
-    pub f: bool,            // Odd frame flag
-    
+    pub v: u16,  // Current VRAM address
+    pub t: u16,  // Temporary VRAM address
+    pub x: u8,   // Fine X scroll
+    pub w: bool, // Write toggle
+    pub f: bool, // Odd frame flag
+
     // Background rendering
     pub name_table_byte: u8,
     pub attribute_table_byte: u8,
     pub low_tile_byte: u8,
     pub high_tile_byte: u8,
     pub tile_data: u64,
-    
+
     // Sprite rendering
     pub sprite_count: u8,
     pub sprite_patterns: [u32; 8],
     pub sprite_positions: [u8; 8],
     pub sprite_priorities: [u8; 8],
     pub sprite_indexes: [u8; 8],
-    
+
     // Buffers
     pub front_buffer: [u8; 256 * 240 * 3],
     pub back_buffer: [u8; 256 * 240 * 3],
@@ -94,7 +94,7 @@ impl Ppu {
             back_buffer: [0; 256 * 240 * 3],
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.cycle = 0;
         self.scanline = 0;
@@ -116,16 +116,16 @@ impl Ppu {
         self.nmi_previous = false;
         self.nmi_delay = 0;
     }
-    
+
     pub fn step(&mut self) -> MemoryResult<bool> {
         // Increment cycle
         self.cycle += 1;
-        
+
         // Check if we've completed a scanline
         if self.cycle > 340 {
             self.cycle = 0;
             self.scanline += 1;
-            
+
             // Check if we've completed a frame
             if self.scanline > 261 {
                 self.scanline = 0;
@@ -134,7 +134,7 @@ impl Ppu {
                 return Ok(true); // Frame completed
             }
         }
-        
+
         // Handle NMI
         if self.nmi_delay > 0 {
             self.nmi_delay -= 1;
@@ -142,10 +142,10 @@ impl Ppu {
                 // NMI should be triggered
             }
         }
-        
+
         Ok(false)
     }
-    
+
     pub fn read_register(&mut self, address: u16) -> MemoryResult<u8> {
         match address {
             0x2002 => {
@@ -168,7 +168,7 @@ impl Ppu {
             _ => Err(MemoryError::InvalidRegion(address)),
         }
     }
-    
+
     pub fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         match address {
             0x2000 => {
@@ -231,7 +231,7 @@ impl Ppu {
             _ => Err(MemoryError::InvalidRegion(address)),
         }
     }
-    
+
     fn read_memory(&self, address: u16) -> MemoryResult<u8> {
         match address {
             0x0000..=0x1FFF => Ok(self.pattern_table[address as usize]),
@@ -239,10 +239,13 @@ impl Ppu {
             0x3000..=0x3EFF => Ok(self.name_table[(address - 0x3000) as usize]),
             0x3F00..=0x3F1F => Ok(self.palette[(address - 0x3F00) as usize]),
             0x3F20..=0x3FFF => Ok(self.palette[(address - 0x3F20) as usize]),
-            _ => Err(MemoryError::OutOfBounds { address, size: 0x4000 }),
+            _ => Err(MemoryError::OutOfBounds {
+                address,
+                size: 0x4000,
+            }),
         }
     }
-    
+
     fn write_memory(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         match address {
             0x0000..=0x1FFF => {
@@ -266,14 +269,17 @@ impl Ppu {
                 self.palette[(address - 0x3F20) as usize] = value;
                 Ok(())
             }
-            _ => Err(MemoryError::OutOfBounds { address, size: 0x4000 }),
+            _ => Err(MemoryError::OutOfBounds {
+                address,
+                size: 0x4000,
+            }),
         }
     }
-    
+
     pub fn get_frame_buffer(&self) -> &[u8] {
         &self.front_buffer
     }
-    
+
     pub fn swap_buffers(&mut self) {
         std::mem::swap(&mut self.front_buffer, &mut self.back_buffer);
     }

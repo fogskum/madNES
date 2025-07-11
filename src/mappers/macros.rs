@@ -7,12 +7,12 @@ macro_rules! impl_no_irq_mapper {
             pub fn irq_state(&self) -> bool {
                 false
             }
-            
+
             /// Clear IRQ flag
             pub fn irq_clear(&mut self) {
                 // This mapper doesn't generate IRQs
             }
-            
+
             /// Scanline callback
             pub fn scanline(&mut self) {
                 // This mapper doesn't use scanline counter
@@ -26,7 +26,11 @@ macro_rules! impl_chr_access {
     ($mapper_type:ty, $chr_banks_field:ident) => {
         impl $mapper_type {
             /// Common CHR write logic for ROM vs RAM
-            pub fn chr_write_common(&mut self, _address: u16, mapped_addr: u32) -> crate::error::MemoryResult<Option<u32>> {
+            pub fn chr_write_common(
+                &mut self,
+                _address: u16,
+                mapped_addr: u32,
+            ) -> crate::error::MemoryResult<Option<u32>> {
                 if self.$chr_banks_field == 0 {
                     // CHR RAM - allow writes
                     Ok(Some(mapped_addr))
@@ -50,6 +54,6 @@ macro_rules! impl_prg_mirror {
     };
 }
 
-pub(crate) use impl_no_irq_mapper;
 pub(crate) use impl_chr_access;
+pub(crate) use impl_no_irq_mapper;
 pub(crate) use impl_prg_mirror;

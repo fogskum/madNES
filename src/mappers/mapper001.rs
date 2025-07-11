@@ -1,14 +1,14 @@
+use crate::error::MemoryResult;
+use crate::mappers::macros::{impl_chr_access, impl_no_irq_mapper, impl_prg_mirror};
 use crate::mappers::mapper::Mapper;
 use crate::rom::MirrorMode;
-use crate::error::MemoryResult;
-use crate::mappers::macros::{impl_no_irq_mapper, impl_chr_access, impl_prg_mirror};
 
 /// Mapper 001 - MMC1 (SxROM)
 pub struct Mapper001 {
     prg_banks: u8,
     chr_banks: u8,
     mirror_mode: MirrorMode,
-    
+
     // MMC1 registers
     shift_register: u8,
     shift_count: u8,
@@ -16,7 +16,7 @@ pub struct Mapper001 {
     chr_bank_0: u8,
     chr_bank_1: u8,
     prg_bank: u8,
-    
+
     // PRG RAM
     prg_ram_enabled: bool,
 }
@@ -36,9 +36,9 @@ impl Mapper001 {
             prg_ram_enabled: true,
         }
     }
-    
+
     impl_prg_mirror!();
-    
+
     fn write_register(&mut self, address: u16, value: u8) -> MemoryResult<()> {
         if (value & 0x80) != 0 {
             // Reset shift register
@@ -47,12 +47,12 @@ impl Mapper001 {
             self.control_register |= 0x0C;
             return Ok(());
         }
-        
+
         // Shift in the new bit
         self.shift_register >>= 1;
         self.shift_register |= (value & 0x01) << 4;
         self.shift_count += 1;
-        
+
         if self.shift_count == 5 {
             // Write to the target register
             match address {
@@ -82,12 +82,12 @@ impl Mapper001 {
                 }
                 _ => {}
             }
-            
+
             // Reset shift register
             self.shift_register = 0;
             self.shift_count = 0;
         }
-        
+
         Ok(())
     }
 }
@@ -106,7 +106,7 @@ impl Mapper for Mapper001 {
             0x8000..=0xFFFF => {
                 let prg_mode = (self.control_register >> 2) & 0x03;
                 let bank_size = 0x4000; // 16KB
-                
+
                 match prg_mode {
                     0 | 1 => {
                         // 32KB mode
@@ -141,7 +141,7 @@ impl Mapper for Mapper001 {
             _ => Ok(None),
         }
     }
-    
+
     fn map_prg_write(&mut self, address: u16, value: u8) -> MemoryResult<Option<u32>> {
         match address {
             0x6000..=0x7FFF => {
@@ -160,12 +160,12 @@ impl Mapper for Mapper001 {
             _ => Ok(None),
         }
     }
-    
+
     fn map_chr_read(&self, address: u16) -> MemoryResult<Option<u32>> {
         match address {
             0x0000..=0x1FFF => {
                 let chr_mode = (self.control_register >> 4) & 0x01;
-                
+
                 if chr_mode == 0 {
                     // 8KB mode
                     let bank = (self.chr_bank_0 & 0x1E) >> 1;
@@ -185,12 +185,12 @@ impl Mapper for Mapper001 {
             _ => Ok(None),
         }
     }
-    
+
     fn map_chr_write(&mut self, address: u16, _value: u8) -> MemoryResult<Option<u32>> {
         match address {
             0x0000..=0x1FFF => {
                 let chr_mode = (self.control_register >> 4) & 0x01;
-                
+
                 let mapped_addr = if chr_mode == 0 {
                     // 8KB mode
                     let bank = (self.chr_bank_0 & 0x1E) >> 1;
@@ -203,17 +203,17 @@ impl Mapper for Mapper001 {
                         (address - 0x1000) + (self.chr_bank_1 as u16 * 0x1000)
                     }
                 };
-                
+
                 self.chr_write_common(address, mapped_addr as u32)
             }
             _ => Ok(None),
         }
     }
-    
+
     fn get_mirror_mode(&self) -> MirrorMode {
         self.mirror_mode.clone()
     }
-    
+
     fn reset(&mut self) {
         self.shift_register = 0;
         self.shift_count = 0;
@@ -224,7 +224,7 @@ impl Mapper for Mapper001 {
         self.prg_ram_enabled = true;
         self.mirror_mode = MirrorMode::Horizontal;
     }
-     fn irq_state(&self) -> bool {
+    fn irq_state(&self) -> bool {
         self.irq_state()
     }
 

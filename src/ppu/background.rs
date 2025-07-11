@@ -17,27 +17,27 @@ impl BackgroundRenderer {
             tile_data: 0,
         }
     }
-    
+
     pub fn fetch_nametable_byte(&mut self, _address: u16) -> u8 {
         // Implementation would fetch from nametable
         0
     }
-    
+
     pub fn fetch_attribute_byte(&mut self, _address: u16) -> u8 {
         // Implementation would fetch attribute table data
         0
     }
-    
+
     pub fn fetch_low_tile_byte(&mut self, _address: u16) -> u8 {
         // Implementation would fetch low tile data
         0
     }
-    
+
     pub fn fetch_high_tile_byte(&mut self, _address: u16) -> u8 {
         // Implementation would fetch high tile data
         0
     }
-    
+
     pub fn store_tile_data(&mut self) {
         // Implementation would store tile data for rendering
     }

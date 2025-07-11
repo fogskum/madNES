@@ -1,7 +1,7 @@
+pub mod macros;
 pub mod mapper;
 pub mod mapper000;
 pub mod mapper001;
-pub mod macros;
 
 pub use mapper::Mapper;
 pub use mapper000::Mapper000;
@@ -13,7 +13,10 @@ pub fn create_mapper(mapper_number: u8, prg_banks: u8, chr_banks: u8) -> Box<dyn
         0 => Box::new(Mapper000::new(prg_banks, chr_banks)),
         1 => Box::new(Mapper001::new(prg_banks, chr_banks)),
         _ => {
-            eprintln!("Warning: Unsupported mapper {}, using NROM (0)", mapper_number);
+            eprintln!(
+                "Warning: Unsupported mapper {}, using NROM (0)",
+                mapper_number
+            );
             Box::new(Mapper000::new(prg_banks, chr_banks))
         }
     }

@@ -1,5 +1,5 @@
-use crate::input::controller::{Controller, Button};
 use crate::error::{MemoryError, MemoryResult};
+use crate::input::controller::{Button, Controller};
 use sdl2::keyboard::Keycode;
 
 /// Manages input from keyboard and maps to NES controller
@@ -15,7 +15,7 @@ impl InputManager {
             controller2: Controller::new(),
         }
     }
-    
+
     pub fn handle_key_down(&mut self, keycode: Keycode) {
         match keycode {
             // Controller 1
@@ -27,7 +27,7 @@ impl InputManager {
             Keycode::Down => self.controller1.set_button(Button::Down, true),
             Keycode::Left => self.controller1.set_button(Button::Left, true),
             Keycode::Right => self.controller1.set_button(Button::Right, true),
-            
+
             // Controller 2 (number pad)
             Keycode::Kp1 => self.controller2.set_button(Button::A, true),
             Keycode::Kp2 => self.controller2.set_button(Button::B, true),
@@ -37,11 +37,11 @@ impl InputManager {
             Keycode::Kp5 => self.controller2.set_button(Button::Down, true),
             Keycode::Kp4 => self.controller2.set_button(Button::Left, true),
             Keycode::Kp6 => self.controller2.set_button(Button::Right, true),
-            
+
             _ => {}
         }
     }
-    
+
     pub fn handle_key_up(&mut self, keycode: Keycode) {
         match keycode {
             // Controller 1
@@ -53,7 +53,7 @@ impl InputManager {
             Keycode::Down => self.controller1.set_button(Button::Down, false),
             Keycode::Left => self.controller1.set_button(Button::Left, false),
             Keycode::Right => self.controller1.set_button(Button::Right, false),
-            
+
             // Controller 2 (number pad)
             Keycode::Kp1 => self.controller2.set_button(Button::A, false),
             Keycode::Kp2 => self.controller2.set_button(Button::B, false),
@@ -63,11 +63,11 @@ impl InputManager {
             Keycode::Kp5 => self.controller2.set_button(Button::Down, false),
             Keycode::Kp4 => self.controller2.set_button(Button::Left, false),
             Keycode::Kp6 => self.controller2.set_button(Button::Right, false),
-            
+
             _ => {}
         }
     }
-    
+
     pub fn read_controller(&mut self, controller: u8) -> MemoryResult<u8> {
         match controller {
             0 => self.controller1.read(),
@@ -75,7 +75,7 @@ impl InputManager {
             _ => Err(MemoryError::InvalidRegion(controller as u16)),
         }
     }
-    
+
     pub fn write_controller(&mut self, controller: u8, value: u8) -> MemoryResult<()> {
         match controller {
             0 => self.controller1.write(value),

@@ -5,11 +5,9 @@ pub struct Palette {
 
 impl Palette {
     pub fn new() -> Self {
-        Self {
-            data: [0; 32],
-        }
+        Self { data: [0; 32] }
     }
-    
+
     pub fn read(&self, address: u8) -> u8 {
         let addr = address & 0x1F;
         // Handle palette mirroring
@@ -21,7 +19,7 @@ impl Palette {
             _ => self.data[addr as usize],
         }
     }
-    
+
     pub fn write(&mut self, address: u8, value: u8) {
         let addr = address & 0x1F;
         // Handle palette mirroring
@@ -33,12 +31,12 @@ impl Palette {
             _ => self.data[addr as usize] = value,
         }
     }
-    
+
     pub fn get_rgb(&self, palette_index: u8, color_index: u8) -> (u8, u8, u8) {
         let index = self.read(palette_index * 4 + color_index);
         self.system_palette_to_rgb(index)
     }
-    
+
     fn system_palette_to_rgb(&self, index: u8) -> (u8, u8, u8) {
         // NES system palette (simplified)
         match index & 0x3F {
@@ -58,7 +56,7 @@ impl Palette {
             0x0D => (0, 0, 0),
             0x0E => (0, 0, 0),
             0x0F => (0, 0, 0),
-            
+
             0x10 => (152, 150, 152),
             0x11 => (8, 76, 196),
             0x12 => (48, 50, 236),
@@ -75,7 +73,7 @@ impl Palette {
             0x1D => (0, 0, 0),
             0x1E => (0, 0, 0),
             0x1F => (0, 0, 0),
-            
+
             0x20 => (236, 238, 236),
             0x21 => (76, 154, 236),
             0x22 => (120, 124, 236),
@@ -92,7 +90,7 @@ impl Palette {
             0x2D => (60, 60, 60),
             0x2E => (0, 0, 0),
             0x2F => (0, 0, 0),
-            
+
             0x30 => (236, 238, 236),
             0x31 => (168, 204, 236),
             0x32 => (188, 188, 236),
@@ -109,7 +107,7 @@ impl Palette {
             0x3D => (160, 162, 160),
             0x3E => (0, 0, 0),
             0x3F => (0, 0, 0),
-            
+
             _ => (0, 0, 0),
         }
     }

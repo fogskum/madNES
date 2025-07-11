@@ -1,8 +1,8 @@
-use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
 use crate::cpu::flags::StatusFlag;
-use crate::cpu::instructions::{Instruction, get_instruction};
+use crate::cpu::instructions::{get_instruction, Instruction};
+use crate::cpu::memory::{AddressingMode, Memory, NesMemory};
+use crate::error::{CpuError, CpuResult, EmulatorError, IoError};
 use crate::rom::Rom;
-use crate::error::{IoError, EmulatorError, CpuError, CpuResult};
 use crate::utils::bit_utils;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -76,44 +76,44 @@ impl Cpu {
         if self.get_flag(StatusFlag::InterruptDisable) {
             return;
         }
-        
+
         // Push PC high byte first, then low byte
         let pc_high = (self.pc >> 8) as u8;
         let pc_low = (self.pc & 0xFF) as u8;
         self.push_stack(pc_high);
         self.push_stack(pc_low);
-        
+
         // Push status register with break flag clear (hardware interrupt)
         let mut status = self.p.bits();
         status &= !StatusFlag::Break.bits(); // Clear break flag
-        status |= StatusFlag::Unused.bits();  // Set unused flag
+        status |= StatusFlag::Unused.bits(); // Set unused flag
         self.push_stack(status);
 
         // Set the interrupt disable flag
         self.set_flag(StatusFlag::InterruptDisable, true);
-        
+
         // Set PC to the address stored at 0xFFFE (IRQ vector)
         self.pc = self.read_word(0xFFFE);
     }
 
     pub fn nmi(&mut self) {
         // NMI cannot be masked
-        
+
         // Push PC high byte first, then low byte
         let pc_high = (self.pc >> 8) as u8;
         let pc_low = (self.pc & 0xFF) as u8;
         self.push_stack(pc_high);
         self.push_stack(pc_low);
-        
+
         // Push status register with break flag clear (hardware interrupt)
         let mut status = self.p.bits();
         status &= !StatusFlag::Break.bits(); // Clear break flag
-        status |= StatusFlag::Unused.bits();  // Set unused flag
+        status |= StatusFlag::Unused.bits(); // Set unused flag
         self.push_stack(status);
 
         // Set the interrupt disable flag
         self.set_flag(StatusFlag::InterruptDisable, true);
-        
+
         // Set PC to the address stored at 0xFFFA (NMI vector)
         self.pc = self.read_word(0xFFFA);
     }
@@ -186,7 +186,7 @@ impl Cpu {
         self.memory.get_chr_rom()
     }
 
-    /// Get PRG ROM data 
+    /// Get PRG ROM data
     pub fn get_prg_rom(&self) -> Option<&[u8]> {
         self.memory.get_prg_rom()
     }
@@ -200,23 +200,23 @@ impl Cpu {
                 address
             ));
         }
-        
+
         // Create a fake ROM from the program data for testing
         let rom = Rom {
             prg_rom: program.clone(),
             chr_rom: vec![0; 8192], // 8KB CHR ROM
             mirror_mode: crate::rom::MirrorMode::Horizontal,
-            mapper: 0, // NROM
+            mapper: 0,          // NROM
             prg_ram_size: 8192, // 8KB PRG RAM
         };
-        
+
         // Load ROM into memory
         self.memory.load_prg_rom(rom);
-        
+
         // Set reset vector to point to the program start
         self.write_word(0xFFFC, address);
         self.reset();
-        
+
         // Disassemble for debugging
         self.disassemble(address, address + program.len() as u16);
         Ok(())
@@ -253,8 +253,10 @@ impl Cpu {
         let opcode = self.read_byte(self.pc);
 
         // get instruction metadata for opcode
-        let instruction = get_instruction(opcode)
-            .ok_or(CpuError::UnknownOpcode { opcode, pc: self.pc })?;
+        let instruction = get_instruction(opcode).ok_or(CpuError::UnknownOpcode {
+            opcode,
+            pc: self.pc,
+        })?;
 
         // Collect instruction bytes for logging
         let mut instruction_bytes = vec![opcode];
@@ -508,7 +510,10 @@ impl Cpu {
             AddressingMode::Implied => Ok(0), // Implied has no operand address
             AddressingMode::None => Err(CpuError::InvalidInstruction {
                 address: self.pc,
-                reason: format!("Addressing mode {} not supported!", instruction.addressing_mode),
+                reason: format!(
+                    "Addressing mode {} not supported!",
+                    instruction.addressing_mode
+                ),
             }),
         }
     }
@@ -517,25 +522,25 @@ impl Cpu {
         // BRK is a software interrupt
         // Increment PC by 1 to point to the next instruction after BRK
         self.pc += 1;
-        
+
         // Push PC high byte first, then low byte
         let pc_high = (self.pc >> 8) as u8;
         let pc_low = (self.pc & 0xFF) as u8;
         self.push_stack(pc_high);
         self.push_stack(pc_low);
-        
+
         // Push status register with break flag set (software interrupt)
         let mut status = self.p.bits();
-        status |= StatusFlag::Break.bits();  // Set break flag
+        status |= StatusFlag::Break.bits(); // Set break flag
         status |= StatusFlag::Unused.bits(); // Set unused flag
         self.push_stack(status);
 
         // Set the interrupt disable flag
         self.set_flag(StatusFlag::InterruptDisable, true);
-        
+
         // Set PC to the address stored at 0xFFFE (IRQ vector, same as IRQ)
         self.pc = self.read_word(0xFFFE);
-        
+
         0
     }
 
@@ -560,8 +565,6 @@ impl Cpu {
         self.x = self.x.wrapping_add(1);
         self.update_nz_flags(self.x);
     }
-
-
 
     // No operation
     fn nop(&mut self) {}
@@ -630,7 +633,7 @@ impl Cpu {
     fn rti(&mut self) {
         // Pull status from stack (with B flag ignored)
         let status = self.pull_stack();
-         // Set unused flag
+        // Set unused flag
         self.p = StatusFlag::from_bits_truncate(status & 0b1110_1111 | 0b0010_0000);
         // Pull PC from stack (low then high)
         let pcl = self.pull_stack();
@@ -648,7 +651,7 @@ impl Cpu {
     //     let hi = (value >> 8) as u8;
     //     self.push_stack(lo);
     //     self.push_stack(hi);
-    // }    
+    // }
 
     fn pull_stack(&mut self) -> u8 {
         self.sp = self.sp.wrapping_add(1);
@@ -781,7 +784,7 @@ impl Cpu {
 
             // add cycles for branch instruction
             self.cycles += 1;
-            
+
             // Check for page crossing
             if bit_utils::page_crossed(old_pc, self.pc) {
                 // Extra cycle for page crossing
@@ -939,7 +942,7 @@ impl Cpu {
     fn log_cpu_state(&self, instruction_bytes: &[u8], opcode: u8) {
         // Get instruction info
         let instruction = get_instruction(opcode).unwrap();
-        
+
         // Build disassembly string based on addressing mode
         let disassembly = match instruction.addressing_mode {
             AddressingMode::Implied => instruction.mnemonic.to_string(),
@@ -1028,24 +1031,32 @@ impl Cpu {
             }
             AddressingMode::None => instruction.mnemonic.to_string(),
         };
-        
+
         // Format: PC  INSTRUCTION_BYTES  DISASSEMBLY  A:XX X:XX Y:XX P:XX SP:XX CYC:XXX
         let mut log_line = format!("{:04X}  ", self.pc);
-        
+
         // Add instruction bytes (pad to 8 characters)
-        let bytes_str = instruction_bytes.iter()
+        let bytes_str = instruction_bytes
+            .iter()
             .map(|b| format!("{:02X}", b))
             .collect::<Vec<_>>()
             .join(" ");
         log_line.push_str(&format!("{:8} ", bytes_str));
-        
+
         // Add disassembly (pad to 32 characters)
         log_line.push_str(&format!("{:32} ", disassembly));
-        
+
         // Add register states
-        log_line.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:3}",
-            self.a, self.x, self.y, self.p.bits(), self.sp, self.cycles));
-        
+        log_line.push_str(&format!(
+            "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:3}",
+            self.a,
+            self.x,
+            self.y,
+            self.p.bits(),
+            self.sp,
+            self.cycles
+        ));
+
         // Write to log file
         if let Ok(mut file) = OpenOptions::new()
             .create(true)
@@ -1058,8 +1069,12 @@ impl Cpu {
 
     // Initialize the log file (clear previous content)
     pub fn init_log() -> Result<(), EmulatorError> {
-        std::fs::File::create("madnes.log")
-            .map_err(|e| EmulatorError::Io(IoError::WriteError(format!("Failed to create log file: {}", e))))?;
+        std::fs::File::create("madnes.log").map_err(|e| {
+            EmulatorError::Io(IoError::WriteError(format!(
+                "Failed to create log file: {}",
+                e
+            )))
+        })?;
         Ok(())
     }
 }
@@ -1085,12 +1100,12 @@ mod tests {
     #[test]
     fn test_reset() {
         let mut cpu = Cpu::new();
-        
+
         // Create a ROM with a reset vector at 0x4242
         let mut rom_data = vec![0; 0x8000]; // 32KB ROM
         rom_data[0x7FFC] = 0x42; // Low byte of reset vector at 0xFFFC
         rom_data[0x7FFD] = 0x42; // High byte of reset vector at 0xFFFD
-        
+
         let rom = Rom {
             prg_rom: rom_data,
             chr_rom: vec![0; 8192],
@@ -1098,7 +1113,7 @@ mod tests {
             mapper: 0,
             prg_ram_size: 8192,
         };
-        
+
         cpu.memory.load_prg_rom(rom);
         cpu.reset();
         assert_eq!(cpu.a, 0);
@@ -1137,7 +1152,8 @@ mod tests {
         // INX          /* increment X */
         // BRK          /* break */
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xA9, 0xC0, 0xAA, 0xE8, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = PROGRAM_ADDRESS;
         cpu.run(false);
         assert_eq!(cpu.x, 0xC1);
@@ -1146,7 +1162,8 @@ mod tests {
     #[test]
     fn test_lda_immediate() {
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xA9, 0x42, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = PROGRAM_ADDRESS;
         cpu.run(true);
         assert_eq!(cpu.a, 0x42);
@@ -1157,7 +1174,8 @@ mod tests {
     #[test]
     fn test_lda_zero_flag() {
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0x00, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xA9, 0x00, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         cpu.run(false);
         assert_eq!(cpu.a, 0x00);
@@ -1167,7 +1185,8 @@ mod tests {
     #[test]
     fn test_lda_negative_flag() {
         let mut cpu = Cpu::new();
-        cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xA9, 0xFF, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         cpu.run(false);
         assert_eq!(cpu.a, 0xFF);
@@ -1178,7 +1197,8 @@ mod tests {
     fn test_lda_zeropage() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x77); // value at $10
-        cpu.load_program(vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xA5, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         cpu.run(true);
         assert_eq!(cpu.a, 0x77);
@@ -1188,11 +1208,12 @@ mod tests {
     fn test_bvc_branch_taken() {
         let mut cpu = Cpu::new();
         // BVC $02 - should branch 2 bytes forward if overflow is clear
-        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute BVC
-        // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
+                            // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
         assert_eq!(cpu.pc, 0x8004);
     }
 
@@ -1200,11 +1221,12 @@ mod tests {
     fn test_bvc_branch_not_taken() {
         let mut cpu = Cpu::new();
         // BVC $02 - should not branch if overflow is set
-        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x50, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag AFTER load_program
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute BVC
-        // PC should be at 0x8000 + 2 (instruction length) = 0x8002
+                            // PC should be at 0x8000 + 2 (instruction length) = 0x8002
         assert_eq!(cpu.pc, 0x8002);
     }
 
@@ -1212,11 +1234,12 @@ mod tests {
     fn test_bvs_branch_taken() {
         let mut cpu = Cpu::new();
         // BVS $02 - should branch 2 bytes forward if overflow is set
-        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.set_flag(StatusFlag::Overflow, true); // Set overflow flag
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute BVS
-        // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
+                            // PC should be at 0x8000 + 2 (instruction length) + 2 (branch offset) = 0x8004
         assert_eq!(cpu.pc, 0x8004);
     }
 
@@ -1224,11 +1247,12 @@ mod tests {
     fn test_bvs_branch_not_taken() {
         let mut cpu = Cpu::new();
         // BVS $02 - should not branch if overflow is clear
-        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x70, 0x02, 0xEA, 0xEA, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.set_flag(StatusFlag::Overflow, false); // Clear overflow flag (though it should already be clear)
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute BVS
-        // PC should be at 0x8000 + 2 (instruction length) = 0x8002
+                            // PC should be at 0x8000 + 2 (instruction length) = 0x8002
         assert_eq!(cpu.pc, 0x8002);
     }
 
@@ -1236,8 +1260,9 @@ mod tests {
     fn test_inc_zeropage() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x42); // value at $10
-        // INC $10 - increment value at zero page address $10
-        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+                                    // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute INC $10
         assert_eq!(cpu.read_byte(0x10), 0x43);
@@ -1249,8 +1274,9 @@ mod tests {
     fn test_inc_zeropage_x() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x15, 0x7E); // value at $10 + X = $15
-        // INC $10,X - increment value at zero page address $10 + X
-        cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+                                    // INC $10,X - increment value at zero page address $10 + X
+        cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.x = 0x05; // Set X AFTER load_program since it calls reset()
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute INC $10,X
@@ -1263,8 +1289,9 @@ mod tests {
     fn test_inc_absolute() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x3000, 0x80); // value at $3000
-        // INC $3000 - increment value at absolute address $3000
-        cpu.load_program(vec![0xEE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS).unwrap();
+                                      // INC $3000 - increment value at absolute address $3000
+        cpu.load_program(vec![0xEE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute INC $3000
         assert_eq!(cpu.read_byte(0x3000), 0x81);
@@ -1276,8 +1303,9 @@ mod tests {
     fn test_inc_absolute_x() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x3010, 0xFE); // value at $3000 + X = $3010
-        // INC $3000,X - increment value at absolute address $3000 + X
-        cpu.load_program(vec![0xFE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS).unwrap();
+                                      // INC $3000,X - increment value at absolute address $3000 + X
+        cpu.load_program(vec![0xFE, 0x00, 0x30, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.x = 0x10; // Set X AFTER load_program since it calls reset()
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute INC $3000,X
@@ -1290,8 +1318,9 @@ mod tests {
     fn test_inc_wraparound_to_zero() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0xFF); // value at $10
-        // INC $10 - increment value at zero page address $10
-        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+                                    // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute INC $10
         assert_eq!(cpu.read_byte(0x10), 0x00); // Should wrap around to 0
@@ -1303,8 +1332,9 @@ mod tests {
     fn test_inc_negative_flag() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x7F); // value at $10
-        // INC $10 - increment value at zero page address $10
-        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+                                    // INC $10 - increment value at zero page address $10
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute INC $10
         assert_eq!(cpu.read_byte(0x10), 0x80); // Should become 0x80
@@ -1317,16 +1347,17 @@ mod tests {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0x42); // value at $10
         println!("Before INC: memory[0x10] = {}", cpu.read_byte(0x10));
-        
+
         // INC $10 - increment value at zero page address $10
-        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xE6, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
-        
+
         let opcode = cpu.read_byte(cpu.pc);
         println!("Opcode: 0x{:02X}", opcode);
-        
+
         let _ = cpu.step(); // Execute INC $10
-        
+
         println!("After INC: memory[0x10] = {}", cpu.read_byte(0x10));
         assert_eq!(cpu.read_byte(0x10), 0x43);
     }
@@ -1335,21 +1366,31 @@ mod tests {
     fn test_inc_zeropage_x_debug() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x15, 0x7E); // value at $10 + X = $15
-        
+
         // INC $10,X - increment value at zero page address $10 + X
-        cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0xF6, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.x = 0x05; // Set X AFTER load_program since it calls reset()
-        
-        println!("Before INC: X = {}, memory[0x15] = {}", cpu.x, cpu.read_byte(0x15));
+
+        println!(
+            "Before INC: X = {}, memory[0x15] = {}",
+            cpu.x,
+            cpu.read_byte(0x15)
+        );
         cpu.pc = 0x8000;
-        
+
         let opcode = cpu.read_byte(cpu.pc);
         let operand = cpu.read_byte(cpu.pc + 1);
         println!("Opcode: 0x{:02X}, Operand: 0x{:02X}", opcode, operand);
-        println!("Calculated address should be: 0x{:02X} + 0x{:02X} = 0x{:02X}", operand, cpu.x, operand.wrapping_add(cpu.x));
-        
+        println!(
+            "Calculated address should be: 0x{:02X} + 0x{:02X} = 0x{:02X}",
+            operand,
+            cpu.x,
+            operand.wrapping_add(cpu.x)
+        );
+
         let _ = cpu.step(); // Execute INC $10,X
-        
+
         println!("After INC: memory[0x15] = {}", cpu.read_byte(0x15));
         println!("After INC: memory[0x10] = {}", cpu.read_byte(0x10));
         assert_eq!(cpu.read_byte(0x15), 0x7F);
@@ -1361,18 +1402,22 @@ mod tests {
         // Test a simple program that uses INC to count up
         // Initialize counter at address 0x20 with value 0x05
         cpu.write_byte(0x20, 0x05);
-        
-        // Program: 
+
+        // Program:
         // INC $20    ; increment counter at 0x20
         // INC $20    ; increment counter at 0x20 again
         // LDA $20    ; load counter into accumulator
         // BRK        ; break
-        cpu.load_program(vec![0xE6, 0x20, 0xE6, 0x20, 0xA5, 0x20, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(
+            vec![0xE6, 0x20, 0xE6, 0x20, 0xA5, 0x20, 0x00],
+            PROGRAM_ADDRESS,
+        )
+        .unwrap();
         cpu.pc = 0x8000;
-        
+
         // Execute the program
         cpu.run(false);
-        
+
         // Verify the counter was incremented twice (0x05 -> 0x07)
         assert_eq!(cpu.read_byte(0x20), 0x07);
         assert_eq!(cpu.a, 0x07); // Should also be loaded into accumulator
@@ -1384,7 +1429,8 @@ mod tests {
     fn test_eor_immediate() {
         let mut cpu = Cpu::new();
         // EOR #$FF - should flip all bits
-        cpu.load_program(vec![0x49, 0xFF, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x49, 0xFF, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.a = 0b10101010; // Set A to known pattern AFTER load_program
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute EOR #$FF
@@ -1397,7 +1443,8 @@ mod tests {
     fn test_eor_zero_flag() {
         let mut cpu = Cpu::new();
         // EOR #$42 - should result in zero
-        cpu.load_program(vec![0x49, 0x42, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x49, 0x42, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.a = 0x42; // Set A AFTER load_program
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute EOR #$42
@@ -1438,8 +1485,9 @@ mod tests {
     fn test_asl_memory() {
         let mut cpu = Cpu::new();
         cpu.write_byte(0x10, 0b00110011); // Set memory value
-        // ASL $10 - shift left memory at zero page
-        cpu.load_program(vec![0x06, 0x10, 0x00], PROGRAM_ADDRESS).unwrap();
+                                          // ASL $10 - shift left memory at zero page
+        cpu.load_program(vec![0x06, 0x10, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.pc = 0x8000;
         let _ = cpu.step(); // Execute ASL $10
         assert_eq!(cpu.read_byte(0x10), 0b01100110); // Should be shifted left
@@ -1456,19 +1504,20 @@ mod tests {
         // EOR #$55   ; flip some bits
         // ASL A      ; shift left
         // EOR #$AA   ; flip different bits
-        cpu.load_program(vec![0x49, 0x55, 0x0A, 0x49, 0xAA, 0x00], PROGRAM_ADDRESS).unwrap();
+        cpu.load_program(vec![0x49, 0x55, 0x0A, 0x49, 0xAA, 0x00], PROGRAM_ADDRESS)
+            .unwrap();
         cpu.a = 0b11110000; // Set initial pattern AFTER load_program
         cpu.pc = 0x8000;
-        
+
         // Execute EOR #$55
         let _ = cpu.step();
         assert_eq!(cpu.a, 0b10100101); // 0b11110000 ^ 0b01010101 = 0b10100101
-        
+
         // Execute ASL A
         let _ = cpu.step();
         assert_eq!(cpu.a, 0b01001010); // 0b10100101 << 1 = 0b01001010
         assert!(cpu.get_flag(StatusFlag::Carry)); // Bit 7 was 1
-        
+
         // Execute EOR #$AA
         let _ = cpu.step();
         assert_eq!(cpu.a, 0b11100000); // 0b01001010 ^ 0b10101010 = 0b11100000
@@ -1479,14 +1528,14 @@ mod tests {
     #[test]
     fn test_nes_memory_mirroring() {
         let mut cpu = Cpu::new();
-        
+
         // Test internal RAM mirroring (0x0000-0x07FF mirrored to 0x0800-0x1FFF)
         cpu.write_byte(0x0200, 0xAB); // Write to base RAM
         assert_eq!(cpu.read_byte(0x0200), 0xAB); // Read from base
         assert_eq!(cpu.read_byte(0x0A00), 0xAB); // Read from mirror 1 (0x0200 + 0x0800)
         assert_eq!(cpu.read_byte(0x1200), 0xAB); // Read from mirror 2 (0x0200 + 0x1000)
         assert_eq!(cpu.read_byte(0x1A00), 0xAB); // Read from mirror 3 (0x0200 + 0x1800)
-        
+
         // Test writing to mirror affects base
         cpu.write_byte(0x1300, 0xCD); // Write to mirror
         assert_eq!(cpu.read_byte(0x0300), 0xCD); // Should appear in base (0x1300 & 0x07FF = 0x0300)
@@ -1495,13 +1544,13 @@ mod tests {
     #[test]
     fn test_nes_memory_ppu_mirroring() {
         let mut cpu = Cpu::new();
-        
+
         // Test PPU register mirroring (0x2000-0x2007 mirrored throughout 0x2000-0x3FFF)
         cpu.write_byte(0x2002, 0x55); // Write to PPU status register
         assert_eq!(cpu.read_byte(0x2002), 0x55); // Read from base
         assert_eq!(cpu.read_byte(0x200A), 0x55); // Read from mirror (0x200A & 0x0007 = 0x0002)
         assert_eq!(cpu.read_byte(0x3002), 0x55); // Read from high mirror
-        
+
         // Test writing to mirror affects base
         cpu.write_byte(0x2409, 0x77); // Write to mirror (0x2409 & 0x0007 = 0x0001)
         assert_eq!(cpu.read_byte(0x2001), 0x77); // Should appear in base register
@@ -1510,13 +1559,13 @@ mod tests {
     #[test]
     fn test_nes_memory_regions() {
         let mut cpu = Cpu::new();
-        
+
         // Test PRG RAM area (0x6000-0x7FFF)
         cpu.write_byte(0x6000, 0x11);
         cpu.write_byte(0x7FFF, 0x22);
         assert_eq!(cpu.read_byte(0x6000), 0x11);
         assert_eq!(cpu.read_byte(0x7FFF), 0x22);
-        
+
         // Test APU/IO area (0x4000-0x401F)
         cpu.write_byte(0x4000, 0x33);
         cpu.write_byte(0x4015, 0x44);
@@ -1527,7 +1576,7 @@ mod tests {
     #[test]
     fn test_nes_memory_prg_rom() {
         let mut cpu = Cpu::new();
-        
+
         // Load a small ROM
         let rom_data = Rom {
             prg_rom: vec![0x01, 0x02, 0x03, 0x04],
@@ -1537,13 +1586,13 @@ mod tests {
             prg_ram_size: 8192,
         };
         cpu.memory.load_prg_rom(rom_data);
-        
+
         // Test reading from PRG ROM
         assert_eq!(cpu.read_byte(0x8000), 0x01);
         assert_eq!(cpu.read_byte(0x8001), 0x02);
         assert_eq!(cpu.read_byte(0x8002), 0x03);
         assert_eq!(cpu.read_byte(0x8003), 0x04);
-        
+
         // Test 16KB ROM mirroring (if ROM is exactly 16KB, it mirrors in upper 16KB)
         let rom_16kb = Rom {
             prg_rom: vec![0xAA; 0x4000], // 16KB ROM
