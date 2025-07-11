@@ -10,9 +10,12 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, TextureCreator};
 use sdl2::video::{Window, WindowContext};
-use sdl2::{EventPump};
+use sdl2::{EventPump, VideoSubsystem};
 use sdl2::ttf::{Sdl2TtfContext};
 use std::time::{Duration, Instant};
+
+const NES_WIDTH: u32 = 256;
+const NES_HEIGHT: u32 = 240;
 
 pub struct Emulator {
     #[allow(dead_code)]
@@ -43,32 +46,10 @@ impl Emulator {
             .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "init"))?;
         
         // Create main emulator window
-        let main_window = video_subsystem
-            .window("madNES - Main", options.width, options.height)
-            .position_centered()
-            .build()
-            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "window"))?;
-
-        let mut main_canvas = main_window
-            .into_canvas()
-            .build()
-            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "renderer"))?;
-
-        main_canvas.set_draw_color(Color::RGB(0, 255, 0));
-        main_canvas.clear();
-        main_canvas.present();
+        let main_canvas = Emulator::create_main_canvas(&video_subsystem)?;
 
         // Create debug window for disassembly
-        let debug_window = video_subsystem
-            .window("madNES - Debug", 600, 800)
-            .position(50, 50)
-            .build()
-            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "window"))?;
-
-        let mut debug_canvas = debug_window
-            .into_canvas()
-            .build()
-            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "renderer"))?;
+        let mut debug_canvas = Emulator::create_debug_canvas(&video_subsystem)?;
 
         // Create texture creator for text rendering
         let texture_creator = debug_canvas.texture_creator();
@@ -119,6 +100,40 @@ impl Emulator {
             font_path: "assets/font.ttf".to_string(),
             font_size: 12
         })
+    }
+
+    fn create_main_canvas(video_subsystem: &VideoSubsystem) -> Result<Canvas<Window>, EmulatorError> {
+        let scale_factor = 2;
+        let main_window = video_subsystem
+            .window("madNES", NES_WIDTH * scale_factor, NES_HEIGHT * scale_factor)
+            .position_centered()
+            .build()
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "window"))?;
+
+        let mut main_canvas = main_window
+            .into_canvas()
+            .build()
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "renderer"))?;
+
+        main_canvas.set_draw_color(Color::RGB(0, 255, 0));
+        main_canvas.clear();
+        main_canvas.present();
+        Ok(main_canvas)
+    }
+
+    fn create_debug_canvas(video_subsystem: &VideoSubsystem) -> Result<Canvas<Window>, EmulatorError> {
+        let debug_window = video_subsystem
+            .window("madNES - Debug", 600, 800)
+            .position(50, 50)
+            .build()
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "window"))?;
+
+        let debug_canvas = debug_window
+            .into_canvas()
+            .build()
+            .map_err(|e| sdl_error_to_emulator_error(e.to_string(), "renderer"))?;
+        
+        Ok(debug_canvas)
     }
 
     pub fn reset(&mut self) {
@@ -230,19 +245,15 @@ impl Emulator {
         self.main_canvas.set_draw_color(Color::RGB(0, 0, 0));
         self.main_canvas.clear();
 
-        // Get NES screen dimensions (256x240 pixels)
-        let nes_width = 256;
-        let nes_height = 240;
-        
         // Calculate scaling to fit the window
         let window_size = self.main_canvas.window().size();
-        let scale_x = window_size.0 as f32 / nes_width as f32;
-        let scale_y = window_size.1 as f32 / nes_height as f32;
+        let scale_x = window_size.0 as f32 / NES_WIDTH as f32;
+        let scale_y = window_size.1 as f32 / NES_HEIGHT as f32;
         let scale = scale_x.min(scale_y) as u32; // Use uniform scaling
         
         // Center the NES screen in the window
-        let scaled_width = nes_width * scale;
-        let scaled_height = nes_height * scale;
+        let scaled_width = NES_WIDTH * scale;
+        let scaled_height = NES_HEIGHT * scale;
         let offset_x = (window_size.0 - scaled_width) / 2;
         let offset_y = (window_size.1 - scaled_height) / 2;
 
@@ -255,7 +266,7 @@ impl Emulator {
         self.debug_canvas.set_draw_color(Color::RGB(0, 0, 100));
         self.debug_canvas.clear();
 
-        // OPTIMIZATION: Batch all text rendering to load font only once
+        // Batch all text rendering to load font only once
         let mut text_batch = Vec::new();
         
         // Prepare all text items for batch rendering
@@ -308,7 +319,10 @@ impl Emulator {
         let current_pc = self.cpu.get_pc();
         
         // Add disassembly lines to batch
-        for (i, line) in lines_to_render.iter().enumerate() {
+        for (i, line) in lines_to_render
+            .iter()
+            .enumerate() {
+            
             let y = i as i32 * 18 + 220;
             
             // Extract address from the line (format: $XXXX: ...)
@@ -348,7 +362,7 @@ impl Emulator {
         Ok(())
     }
 
-    // Optimized batch text rendering - renders multiple lines with a single font load
+    // renders multiple lines with a single font load
     fn render_text_batch(&mut self, text_items: &[(String, i32, i32, Color)]) -> Result<(), EmulatorError> {
         if text_items.is_empty() {
             return Ok(());
@@ -392,7 +406,7 @@ impl Emulator {
     /// Render the NES screen by reading CHR ROM data and converting it to pixels
     fn render_nes_screen(&mut self, offset_x: i32, offset_y: i32, scale: u32) -> Result<(), EmulatorError> {
         // Basic NES color palette (simplified NTSC palette)
-        let nes_palette = [
+        let ntsc_palette = [
             Color::RGB(84, 84, 84),    // 0x00 - Dark gray
             Color::RGB(0, 30, 116),    // 0x01 - Dark blue
             Color::RGB(8, 16, 144),    // 0x02 - Purple
@@ -464,11 +478,11 @@ impl Emulator {
 
         // Create a simple test pattern if no ROM is loaded or for demonstration
         // This will show a checkerboard pattern using CHR ROM data if available
-        for y in 0..240 {
-            for x in 0..256 {
+        for y in 0..NES_HEIGHT {
+            for x in 0..NES_WIDTH {
                 // Read pattern data from CHR ROM or create test pattern
                 let color_index = self.get_pixel_color(x, y);
-                let color = nes_palette[color_index as usize % nes_palette.len()];
+                let color = ntsc_palette[color_index as usize % ntsc_palette.len()];
                 
                 // Draw scaled pixel
                 let pixel_rect = Rect::new(
