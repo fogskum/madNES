@@ -8,7 +8,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 #[allow(dead_code)]
-const PROGRAM_ADDRESS: u16 = 0x8000;
+pub const PROGRAM_ADDRESS: u16 = 0x8000;
 
 /// Represents the 6502 CPU, including registers, program counter,
 /// stack pointer, status flags, memory, and cycle count.
@@ -224,6 +224,7 @@ impl Cpu {
 
     pub fn load_rom(&mut self, rom: Rom) {
         self.memory.load_prg_rom(rom);
+        self.write_word(0xFFFC, PROGRAM_ADDRESS);
     }
 
     pub fn run(&mut self, show_disassembly: bool) {

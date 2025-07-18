@@ -1,4 +1,4 @@
-use crate::cpu::{Cpu, Memory};
+use crate::cpu::Cpu;
 use crate::emulator::options::EmulatorOptions;
 use crate::error::{EmulatorError, IoError, SdlError};
 use crate::rom::Rom;
@@ -86,17 +86,13 @@ impl Emulator {
 
             // Load ROM into CPU memory
             cpu.load_rom(rom.clone());
-
-            // Set reset vector to start of PRG ROM
-            cpu.write_word(0xFFFC, 0x8000);
             cpu.reset();
 
             // Disassemble ROM for debugging
+            let start_address = crate::cpu::core::PROGRAM_ADDRESS;
+            let end_address = start_address + std::cmp::min(rom.prg_rom.len(), 0x100) as u16;
             if options.debug {
-                cpu.disassemble(
-                    0x8000,
-                    0x8000 + std::cmp::min(rom.prg_rom.len(), 0x100) as u16,
-                );
+                cpu.disassemble(start_address, end_address);
             }
         }
 
@@ -538,54 +534,54 @@ impl Emulator {
     ) -> Result<(), EmulatorError> {
         // Basic NES color palette (simplified NTSC palette)
         let ntsc_palette = [
-            Color::RGB(84, 84, 84), // 0x00 - Dark gray
-            Color::RGB(0, 30, 116), // 0x01 - Dark blue
-            Color::RGB(8, 16, 144), // 0x02 - Purple
-            Color::RGB(48, 0, 136), // 0x03 - Dark purple
-            Color::RGB(68, 0, 100), // 0x04 - Dark red
-            Color::RGB(92, 0, 48),  // 0x05 - Brown
-            Color::RGB(84, 4, 0),   // 0x06 - Dark brown
-            Color::RGB(60, 24, 0),  // 0x07 - Orange brown
-            Color::RGB(32, 42, 0),  // 0x08 - Dark green
-            Color::RGB(8, 58, 0),   // 0x09 - Green
-            Color::RGB(0, 64, 0),   // 0x0A - Light green
-            Color::RGB(0, 60, 13),  // 0x0B - Cyan green
-            Color::RGB(0, 50, 60),  // 0x0C - Dark cyan
-            Color::RGB(0, 0, 0),    // 0x0D - Black
-            Color::RGB(0, 0, 0),    // 0x0E - Black
-            Color::RGB(0, 0, 0),    // 0x0F - Black
+            Color::RGB(84, 84, 84),    // 0x00 - Dark gray
+            Color::RGB(0, 30, 116),    // 0x01 - Dark blue
+            Color::RGB(8, 16, 144),    // 0x02 - Purple
+            Color::RGB(48, 0, 136),    // 0x03 - Dark purple
+            Color::RGB(68, 0, 100),    // 0x04 - Dark red
+            Color::RGB(92, 0, 48),     // 0x05 - Brown
+            Color::RGB(84, 4, 0),      // 0x06 - Dark brown
+            Color::RGB(60, 24, 0),     // 0x07 - Orange brown
+            Color::RGB(32, 42, 0),     // 0x08 - Dark green
+            Color::RGB(8, 58, 0),      // 0x09 - Green
+            Color::RGB(0, 64, 0),      // 0x0A - Light green
+            Color::RGB(0, 60, 13),     // 0x0B - Cyan green
+            Color::RGB(0, 50, 60),     // 0x0C - Dark cyan
+            Color::RGB(0, 0, 0),       // 0x0D - Black
+            Color::RGB(0, 0, 0),       // 0x0E - Black
+            Color::RGB(0, 0, 0),       // 0x0F - Black
             Color::RGB(152, 150, 152), // 0x10 - Light gray
-            Color::RGB(8, 76, 196), // 0x11 - Blue
-            Color::RGB(48, 50, 236), // 0x12 - Light purple
-            Color::RGB(92, 30, 228), // 0x13 - Pink
-            Color::RGB(136, 20, 176), // 0x14 - Magenta
-            Color::RGB(160, 20, 100), // 0x15 - Red
-            Color::RGB(152, 34, 32), // 0x16 - Orange red
-            Color::RGB(120, 60, 0), // 0x17 - Orange
-            Color::RGB(84, 90, 0),  // 0x18 - Yellow green
-            Color::RGB(40, 114, 0), // 0x19 - Light green
-            Color::RGB(8, 124, 0),  // 0x1A - Green
-            Color::RGB(0, 118, 40), // 0x1B - Cyan
-            Color::RGB(0, 102, 120), // 0x1C - Light cyan
-            Color::RGB(0, 0, 0),    // 0x1D - Black
-            Color::RGB(0, 0, 0),    // 0x1E - Black
-            Color::RGB(0, 0, 0),    // 0x1F - Black
+            Color::RGB(8, 76, 196),    // 0x11 - Blue
+            Color::RGB(48, 50, 236),   // 0x12 - Light purple
+            Color::RGB(92, 30, 228),   // 0x13 - Pink
+            Color::RGB(136, 20, 176),  // 0x14 - Magenta
+            Color::RGB(160, 20, 100),  // 0x15 - Red
+            Color::RGB(152, 34, 32),   // 0x16 - Orange red
+            Color::RGB(120, 60, 0),    // 0x17 - Orange
+            Color::RGB(84, 90, 0),     // 0x18 - Yellow green
+            Color::RGB(40, 114, 0),    // 0x19 - Light green
+            Color::RGB(8, 124, 0),     // 0x1A - Green
+            Color::RGB(0, 118, 40),    // 0x1B - Cyan
+            Color::RGB(0, 102, 120),   // 0x1C - Light cyan
+            Color::RGB(0, 0, 0),       // 0x1D - Black
+            Color::RGB(0, 0, 0),       // 0x1E - Black
+            Color::RGB(0, 0, 0),       // 0x1F - Black
             Color::RGB(236, 238, 236), // 0x20 - White
-            Color::RGB(76, 154, 236), // 0x21 - Light blue
+            Color::RGB(76, 154, 236),  // 0x21 - Light blue
             Color::RGB(120, 124, 236), // 0x22 - Lavender
-            Color::RGB(176, 98, 236), // 0x23 - Light pink
-            Color::RGB(228, 84, 236), // 0x24 - Pink
-            Color::RGB(236, 88, 180), // 0x25 - Light red
+            Color::RGB(176, 98, 236),  // 0x23 - Light pink
+            Color::RGB(228, 84, 236),  // 0x24 - Pink
+            Color::RGB(236, 88, 180),  // 0x25 - Light red
             Color::RGB(236, 106, 100), // 0x26 - Salmon
-            Color::RGB(212, 136, 32), // 0x27 - Light orange
-            Color::RGB(160, 170, 0), // 0x28 - Yellow
-            Color::RGB(116, 196, 0), // 0x29 - Light green
-            Color::RGB(76, 208, 32), // 0x2A - Lime
-            Color::RGB(56, 204, 108), // 0x2B - Light cyan
-            Color::RGB(56, 180, 204), // 0x2C - Cyan
-            Color::RGB(60, 60, 60), // 0x2D - Dark gray
-            Color::RGB(0, 0, 0),    // 0x2E - Black
-            Color::RGB(0, 0, 0),    // 0x2F - Black
+            Color::RGB(212, 136, 32),  // 0x27 - Light orange
+            Color::RGB(160, 170, 0),   // 0x28 - Yellow
+            Color::RGB(116, 196, 0),   // 0x29 - Light green
+            Color::RGB(76, 208, 32),   // 0x2A - Lime
+            Color::RGB(56, 204, 108),  // 0x2B - Light cyan
+            Color::RGB(56, 180, 204),  // 0x2C - Cyan
+            Color::RGB(60, 60, 60),    // 0x2D - Dark gray
+            Color::RGB(0, 0, 0),       // 0x2E - Black
+            Color::RGB(0, 0, 0),       // 0x2F - Black
             Color::RGB(236, 238, 236), // 0x30 - White (repeat)
             Color::RGB(168, 204, 236), // 0x31 - Very light blue
             Color::RGB(188, 188, 236), // 0x32 - Very light purple
@@ -600,8 +596,8 @@ impl Emulator {
             Color::RGB(152, 226, 180), // 0x3B - Very light cyan
             Color::RGB(160, 214, 228), // 0x3C - Very light blue
             Color::RGB(160, 162, 160), // 0x3D - Light gray
-            Color::RGB(0, 0, 0),    // 0x3E - Black
-            Color::RGB(0, 0, 0),    // 0x3F - Black
+            Color::RGB(0, 0, 0),       // 0x3E - Black
+            Color::RGB(0, 0, 0),       // 0x3F - Black
         ];
 
         // Create a simple test pattern if no ROM is loaded or for demonstration
